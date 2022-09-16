@@ -39,12 +39,17 @@
 
 #include <reflex/input.h>
 #include <reflex/absmatcher.h>
+#ifndef SOUP_BUILD
 #include <sstream>
 #include <stack>
+#endif
 
 namespace reflex {
 
 /// The abstract lexer class template that is the abstract root class of all reflex-generated scanners.
+#ifdef SOUP_BUILD
+export
+#endif
 template<typename M> /// @tparam <M> matcher class derived from reflex::AbstractMatcher
 class AbstractLexer {
  public:

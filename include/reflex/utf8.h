@@ -37,8 +37,10 @@
 #ifndef REFLEX_UTF8_H
 #define REFLEX_UTF8_H
 
+#ifndef SOUP_BUILD
 #include <cstring>
 #include <string>
+#endif
 
 #if defined(WITH_STANDARD_REPLACEMENT_CHARACTER)
 /// Replace invalid UTF-8 with the standard replacement character U+FFFD.  This is not the default in RE/flex.
@@ -50,6 +52,7 @@
 # define REFLEX_NONCHAR_UTF8 "\xf8\x88\x80\x80\x80"
 #endif
 
+#ifndef MACRO_ONLY
 namespace reflex {
 
 /// Convert an 8-bit ASCII + Latin-1 Supplement range [a,b] to a regex pattern.
@@ -265,5 +268,7 @@ inline std::wstring wcs(const std::string& s) ///< string with UTF-8 to convert
 }
 
 } // namespace reflex
+
+#endif
 
 #endif

@@ -42,8 +42,10 @@ This lowers storage overhead and reduces insertion, deletion, and search time.
 #ifndef REFLEX_RANGES_H
 #define REFLEX_RANGES_H
 
+#ifndef SOUP_BUILD
 #include <functional> // std::less
 #include <set>        // base class container
+#endif
 
 namespace reflex {
 

@@ -34,12 +34,26 @@
 @copyright (c) BSD-3 License - see LICENSE.txt
 */
 
+#ifdef SOUP_BUILD
+module;
+#include <iostream>
+#include <vector>
+#define WITH_VECTOR
+#define WITH_TREE_DFA
+#include <reflex/debug.h>
+#else
 #include <reflex/pattern.h>
 #include <reflex/timer.h>
+#endif
+
 #include <algorithm>
 #include <cstdlib>
 #include <cerrno>
 #include <cmath>
+
+#ifdef SOUP_BUILD
+module reflex;
+#endif
 
 /// DFA compaction: -1 == reverse order edge compression (best); 1 == edge compression; 0 == no edge compression.
 /** Edge compression reorders edges to produce fewer tests when executed in the compacted order.

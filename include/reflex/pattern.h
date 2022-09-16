@@ -43,6 +43,7 @@
 #include <reflex/input.h>
 #include <reflex/ranges.h>
 #include <reflex/setop.h>
+#ifndef SOUP_BUILD
 #include <cctype>
 #include <cstring>
 #include <iostream>
@@ -51,6 +52,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#endif
 
 // ugrep 3.7: use vectors instead of sets to store positions to compile DFAs
 #define WITH_VECTOR
@@ -67,6 +69,9 @@
 namespace reflex {
 
 /// Pattern class holds a regex pattern and its compiled FSM opcode table or code for the reflex::Matcher engine.
+#ifdef SOUP_BUILD
+export
+#endif
 class Pattern {
   friend class Matcher;      ///< permit access by the reflex::Matcher engine
   friend class FuzzyMatcher; ///< permit access by the reflex::FuzzyMatcher engine

@@ -34,6 +34,17 @@
 @copyright (c) BSD-3 License - see LICENSE.txt
 */
 
+#ifdef SOUP_BUILD
+module;
+#include <cctype>
+#include <cstdio>
+#include <cstring>
+#include <iostream>
+#endif
+
+#ifdef SOUP_BUILD
+module reflex;
+#else
 #include <reflex/convert.h>
 #include <reflex/posix.h>
 #include <reflex/ranges.h>
@@ -42,6 +53,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <cstring>
+#endif
 
 namespace reflex {
 

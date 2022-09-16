@@ -34,6 +34,14 @@
 @copyright (c) BSD-3 License - see LICENSE.txt
 */
 
+#ifdef SOUP_BUILD
+module;
+#include <cassert>
+#include <cstdio>
+#include <iostream>
+#include <reflex/debug.h>
+#endif
+
 #if defined(COMPILE_AVX512BW) && !defined(HAVE_AVX512BW)
 
 // appease ranlib "has no symbols"
@@ -46,7 +54,11 @@ void matcher_not_compiled_with_avx2() { }
 
 #else
 
+#ifdef SOUP_BUILD
+module reflex;
+#else
 #include <reflex/matcher.h>
+#endif
 
 namespace reflex {
 

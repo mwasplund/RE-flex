@@ -38,11 +38,13 @@
 #define REFLEX_INPUT_H
 
 #include <reflex/utf8.h>
+#ifndef SOUP_BUILD
 #include <cstdio>
 #include <cstring>
 #include <iostream>
 #include <string>
 #include <stdint.h>
+#endif
 
 namespace reflex {
 
@@ -273,6 +275,9 @@ With reflex::BufferedInput::streambuf to create a buffered std::istream:
     fclose(input.file());
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
+#ifdef SOUP_BUILD
+export
+#endif
 class Input {
  public:
   /// Common file_encoding constants type.

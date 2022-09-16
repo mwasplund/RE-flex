@@ -39,11 +39,16 @@
 
 #include <reflex/absmatcher.h>
 #include <reflex/pattern.h>
+#ifndef SOUP_BUILD
 #include <stack>
+#endif
 
 namespace reflex {
 
 /// RE/flex matcher engine class, implements reflex::PatternMatcher pattern matching interface with scan, find, split functors and iterators.
+#ifdef SOUP_BUILD
+export
+#endif
 class Matcher : public PatternMatcher<reflex::Pattern> {
  public:
   /// Convert a regex to an acceptable form, given the specified regex library signature `"[decls:]escapes[?+]"`, see reflex::convert.

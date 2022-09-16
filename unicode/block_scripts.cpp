@@ -1,5 +1,16 @@
 // Converted from http://www.unicode.org/Public/UCD/latest/ucd/Blocks.txt by block_scripts.l
+
+#ifdef SOUP_BUILD
+module;
+#include <iostream>
+#else
 #include <reflex/unicode.h>
+#endif
+
+#ifdef SOUP_BUILD
+module reflex;
+#endif
+
 void reflex::Unicode::Tables::block_scripts(void)
 {
   static const int IsAdlam[] = { 125184, 125279, 0, 0 };

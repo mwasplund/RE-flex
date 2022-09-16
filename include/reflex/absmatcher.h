@@ -57,9 +57,11 @@
 #include <reflex/input.h>
 #include <reflex/traits.h>
 #include <reflex/simd.h>
+#ifndef SOUP_BUILD
 #include <cstdlib>
 #include <cctype>
 #include <iterator>
+#endif
 
 namespace reflex {
 

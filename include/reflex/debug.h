@@ -123,8 +123,10 @@ Techniques used:
 #ifndef REFLEX_DEBUG_H
 #define REFLEX_DEBUG_H
 
+#ifndef SOUP_BUILD
 #include <cassert>
 #include <cstdio>
+#endif
 
 /// If ASSERT not defined, make ASSERT a no-op
 #ifndef ASSERT

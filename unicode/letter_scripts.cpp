@@ -1,5 +1,16 @@
 // Converted from http://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt by letter_scripts.l
+
+#ifdef SOUP_BUILD
+module;
+#include <iostream>
+#else
 #include <reflex/unicode.h>
+#endif
+
+#ifdef SOUP_BUILD
+module reflex;
+#endif
+
 void reflex::Unicode::Tables::letter_scripts(void)
 {
   static const int Ll[] = {

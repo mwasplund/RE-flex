@@ -2,6 +2,9 @@
 #
 # Project contributors: clean with ./clean.sh, do not rely on .gitignore
 
+# soup
+out/
+
 # Object files
 *.o
 *.os

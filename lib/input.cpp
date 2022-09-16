@@ -34,7 +34,17 @@
 @copyright (c) BSD-3 License - see LICENSE.txt
 */
 
+
+#ifdef SOUP_BUILD
+module;
+#include <iostream>
+
+#define MACRO_ONLY
+#include <reflex/utf8.h>
+#else
 #include <reflex/input.h>
+#endif
+
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -47,6 +57,10 @@
 # define fseeko _fseeki64
 #else
 # include <unistd.h> // off_t, fstat()
+#endif
+
+#ifdef SOUP_BUILD
+module reflex;
 #endif
 
 namespace reflex {

@@ -37,9 +37,11 @@
 #ifndef REFLEX_ERROR_H
 #define REFLEX_ERROR_H
 
+#ifndef SOUP_BUILD
 #include <cstdio>
 #include <stdexcept>
 #include <string>
+#endif
 
 namespace reflex {
 
