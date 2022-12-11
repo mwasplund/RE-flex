@@ -3,6 +3,7 @@ module;
 #include <cstring>
 #include <functional>
 #include <iostream>
+#include <list>
 #include <map>
 #include <regex>
 #include <set>
@@ -10,7 +11,13 @@ module;
 #include <stack>
 #include <string>
 
+#include <cstddef>
+
+#if defined(_WIN32)
 #include <windows.h>
+#else defined(__linux__)
+#include <sys/time.h>
+#endif
 
 export module reflex;
 
