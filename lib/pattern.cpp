@@ -36,7 +36,9 @@
 
 #ifdef SOUP_BUILD
 module;
+#include <cstring>
 #include <iostream>
+#include <map>
 #include <vector>
 #define WITH_VECTOR
 #define WITH_TREE_DFA

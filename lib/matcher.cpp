@@ -38,6 +38,7 @@
 module;
 #include <cassert>
 #include <cstdio>
+#include <cstring>
 #include <iostream>
 #include <reflex/debug.h>
 #endif

@@ -40,6 +40,7 @@ module;
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <map>
 #endif
 
 #ifdef SOUP_BUILD

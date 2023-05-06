@@ -37,6 +37,7 @@
 
 #ifdef SOUP_BUILD
 module;
+#include <cstring>
 #include <iostream>
 
 #define MACRO_ONLY

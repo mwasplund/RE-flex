@@ -1,6 +1,6 @@
 Name: "reflex"
 Language: "C++|0.1"
-Version: "1.0.2"
+Version: "1.0.3"
 EnableWarningsAsErrors: false
 IncludePaths: [
 	"include/"
