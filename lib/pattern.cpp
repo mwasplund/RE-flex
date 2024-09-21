@@ -36,6 +36,7 @@
 
 #ifdef SOUP_BUILD
 module;
+#include <cstdint>
 #include <cstring>
 #include <iostream>
 #include <map>
