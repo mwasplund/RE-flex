@@ -2,13 +2,16 @@ SUBDIRS = lib src . tests @EXAMPLESDIR@
 
 man1_MANS = doc/man/reflex.1
 
-EXTRA_DIST = README.md LICENSE.txt CONTRIBUTING.md CODE_OF_CONDUCT.md
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = reflex.pc reflexmin.pc
+
+EXTRA_DIST = README.md LICENSE.txt CONTRIBUTING.md CODE_OF_CONDUCT.md reflex.pc.in reflexmin.pc.in
 
 all-local:	cp2bin
 
 .PHONY:		cp2bin
 
-# to copy the reflex binary to reflex/bin (joins reflex.exe that's already there)
+# to copy the reflex binary to reflex/bin
 cp2bin:		$(top_builddir)/src/reflex
 		-mkdir -p $(top_builddir)/bin
 		-cp -f $< $(top_builddir)/bin

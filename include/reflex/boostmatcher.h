@@ -47,9 +47,9 @@ class BoostMatcher : public PatternMatcher<boost::regex> {
  public:
   /// Convert a regex to an acceptable form, given the specified regex library signature `"[decls:]escapes[?+]"`, see reflex::convert.
   template<typename T>
-  static std::string convert(T regex, convert_flag_type flags = convert_flag::none)
+  static std::string convert(T regex, convert_flag_type flags = convert_flag::none, bool *multiline = NULL)
   {
-    return reflex::convert(regex, "imPRsx!#<>=&'(0123456789:abcdefghklnrstuvwxzABCDHLNQSUWZ0123456789<>?+", flags);
+    return reflex::convert(regex, "imPRsx!#<>=&'(0123456789:abcdefghklnrstuvwxzABCDHLNQSUWZ0123456789<>?+", flags, multiline);
   }
   /// Default constructor.
   BoostMatcher()
@@ -89,8 +89,9 @@ class BoostMatcher : public PatternMatcher<boost::regex> {
       PatternMatcher<boost::regex>(matcher),
       flg_(matcher.flg_)
   { }
+  using PatternMatcher::operator=;
   /// Assign a matcher.
-  BoostMatcher& operator=(const BoostMatcher& matcher) ///< matcher to copy
+  virtual BoostMatcher& operator=(const BoostMatcher& matcher) ///< matcher to copy
   {
     PatternMatcher<boost::regex>::operator=(matcher);
     flg_ = matcher.flg_;
@@ -368,9 +369,9 @@ class BoostPosixMatcher : public BoostMatcher {
  public:
   /// Convert a regex to an acceptable form, given the specified regex library signature `"[decls:]escapes[?+]"`, see reflex::convert.
   template<typename T>
-  static std::string convert(T regex, convert_flag_type flags = convert_flag::none)
+  static std::string convert(T regex, convert_flag_type flags = convert_flag::none, bool *multiline = NULL)
   {
-    return reflex::convert(regex, "imsx!#<=:abcdefghlnrstuvwxzABDHLNQSUWZ0<>", flags);
+    return reflex::convert(regex, "imsx!#<=:abcdefghlnrstuvwxzABDHLNQSUWZ0<>", flags, multiline);
   }
   /// Default constructor.
   BoostPosixMatcher() : BoostMatcher()

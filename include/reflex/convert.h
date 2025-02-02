@@ -41,6 +41,7 @@
 #ifndef SOUP_BUILD
 #include <string>
 #include <map>
+#include <cstring>
 #endif
 
 #if (defined(__WIN32__) || defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(__BORLANDC__)) && !defined(__CYGWIN__) && !defined(__MINGW32__) && !defined(__MINGW64__)
@@ -70,7 +71,8 @@ namespace convert_flag {
   const convert_flag_type dotall     = 0x0080; ///< convert `.` (dot) to match all, same as `(?s)`
   const convert_flag_type freespace  = 0x0100; ///< convert regex by removing spacing, same as `(?x)`
   const convert_flag_type notnewline = 0x0200; ///< inverted character classes and \s do not match newline `\n`
-  const convert_flag_type permissive = 0x0400; ///< convert Unicode to compact UTF-8 patterns and DFA, permits some invalid UTF-8 sequences
+  const convert_flag_type permissive = 0x0400; ///< convert Unicode to compact UTF-8 patterns, permits some invalid UTF-8 sequences
+  const convert_flag_type closing    = 0x8000; ///< permit matching ) literally when it has no opening (
 }
 
 /// @brief Returns the converted regex string given a regex library signature and conversion flags, throws regex_error.
@@ -163,6 +165,7 @@ std::string convert(
     const char                              *pattern,                    ///< regex string pattern to convert
     const char                              *signature,                  ///< regex library signature
     convert_flag_type                        flags = convert_flag::none, ///< conversion flags
+    bool                                    *multiline = NULL,           ///< set to true if pattern may be multiline
     const std::map<std::string,std::string> *macros = NULL)              ///< {name} macros to expand
   ;
 
@@ -170,9 +173,33 @@ inline std::string convert(
     const std::string&                       pattern,
     const char                              *signature,
     convert_flag_type                        flags = convert_flag::none,
+    bool                                    *multiline = NULL,
     const std::map<std::string,std::string> *macros = NULL)
 {
-  return convert(pattern.c_str(), signature, flags, macros);
+  return convert(pattern.c_str(), signature, flags, multiline, macros);
+}
+
+inline bool supports_modifier(
+    const char *signature,
+    int         modchar)
+{
+  if (signature == NULL)
+    return false;
+  const char *escapes = std::strchr(signature, ':');
+  if (escapes == NULL)
+    return false;
+  const char *s = std::strchr(signature, modchar);
+  return s && s < escapes;
+}
+
+inline bool supports_escape(
+    const char *signature,
+    int         escape)
+{
+  if (signature == NULL)
+    return false;
+  const char *escapes = std::strchr(signature, ':');
+  return std::strchr(escapes != NULL ? escapes : signature, escape) != NULL;
 }
 
 } // namespace reflex

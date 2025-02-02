@@ -3,6 +3,8 @@ FuzzyMatcher
 
 A C++ class extension of the [RE/flex](https://github.com/Genivia/RE-flex)
 Matcher class for efficient fuzzy matching and fuzzy search with regex patterns.
+Regex patterns are of the POSIX ERE type, but also support Unicode matching,
+lazy quantifiers, word boundaries and lookaheads.
 
 - specify max error as a parameter, i.e. the max edit distance or
   [Levenshstein distance](https://en.wikipedia.org/wiki/Levenshtein_distance)
@@ -26,6 +28,13 @@ Matcher class for efficient fuzzy matching and fuzzy search with regex patterns.
 - quote regex patterns with `\Q` and `\E` for fuzzy string matching and search
 
 - FuzzyMatcher is used in the [ugrep](https://github.com/Genivia/ugrep) project
+
+Requires
+--------
+
+[RE-Flex](https://github.com/Genivia/RE-flex) version 4.0 or greater, because
+of regex pattern analysis and translation updates to RE/flex 4.0 that are
+also used by [ugrep 5.0](https://github.com/Genivia/ugrep).
 
 Examples
 --------
@@ -110,14 +119,14 @@ The `edits()` method is a `FuzzyMatcher` extension of the `Matcher` class.
 
 The `MAX` parameter may be combined with one or more of the following flags:
 
-- `reflex::FuzzyMatcher::INS` allow character insertions (extra characters)
-- `reflex::FuzzyMatcher::DEL` allow character deletions (missing characters)
-- `reflex::FuzzyMatcher::SUB` character substitutions count as one edit
+- `reflex::FuzzyMatcher::INS` insertions allow extra character(s) in the input
+- `reflex::FuzzyMatcher::DEL` deletions allow missing character(s) in the input
+- `reflex::FuzzyMatcher::SUB` substitutions count as one edit
 - `reflex::FuzzyMatcher::BIN` ASCII/binary fuzzy matching (default is Unicode with Unicode pattern converter, see below)
 
 For example, to allow approximate pattern matches to include up to three
-character insertions, but no deletions or substitutions (this is actually the
-most efficient fuzzy matching possible):
+character insertions, but no deletions or substitutions (allowing insertions
+only is actually the most efficient fuzzy matching possible):
 
     reflex::FuzzyMatcher matcher(regex, 3 | reflex::FuzzyMatcher::INS, INPUT);
 
@@ -146,20 +155,14 @@ in frequently executed functions:
     static const reflex::Pattern pattern(reflex::Matcher::convert("PATTERN", reflex::convert_flag::unicode));
     reflex::FuzzyMatcher matcher(pattern, [MAX,] INPUT);
 
-Requires
---------
-
-[RE/flex](https://github.com/Genivia/RE-flex) downloaded and locally built or
-globally installed to access the `reflex/include` and `reflex/lib` files.
-
 Compiling
 ---------
 
-Assuming `reflex` dir with source code is locally built in the project dir:
+Assuming `reflex` dir with RE/flex source code is locally built:
 
     c++ -o myapp myapp.cpp -Ireflex/include reflex/lib/libreflex.a
 
-Or when the `libreflex` library is installed:
+When the `libreflex` library is built and installed:
 
     c++ -o myapp myapp.cpp -lreflex
 

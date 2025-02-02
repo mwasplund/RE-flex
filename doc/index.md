@@ -13,43 +13,50 @@ RE/flex user guide                                                  {#mainpage}
 What is RE/flex?                                                       {#intro}
 ================
 
-RE/flex is the regex-centric, fast lexical analyzer generator with full Unicode
-support, indentation anchors, lazy quantifiers, word boundaries, and many other
-modern features.  RE/flex also includes a fast regex engine written in C++ with
-options to generate finite state machine tables or direct code to match input
-more efficiently.  RE/flex includes a smart input class to normalize input from
-files, streams, strings, and memory.  RE/flex is compatible with Bison/Yacc and
-accepts Flex lexer specifications.
+A high-performance C++ regex library and a lexical analyzer generator like
+Flex and Lex.
 
-RE/flex does some heavy-lifting for you to make it easier to integrate advanced
-tokenizers with Bison in C++.  The RE/flex code generation tool accepts options
-to fascilitate seamless integration with Bison by generating the necessary
-gluing code, such as the C++ source code expected by "Bison complete parsers".
+The RE/flex lexical analyzer generator extends Flex++ with Unicode support
+and many other useful features, such as regex indentation anchors, regex lazy
+quantifiers, regex word boundaries, methods for error reporting and recovery,
+and options to simplify integration with with Bison and other parsers.
 
-A summary of features:
+The RE/flex lexical analyzer generator does all the heavy-lifting for you to
+make it easier to integrate advanced tokenizers with Bison and other parsers.
+It generates the necessary gluing code depending on the type of Bison parser
+used, such as advanced "Bison complete parsers".
 
-- faster than Flex++ for typical applications such as tokenization;
-- accepts Flex/Lex lexer specifications, extended to support Unicode;
-- IEEE POSIX P1003.2 standard compliant (like Lex and Flex);
-- fully supports Unicode, auto-detects UTF-8/16/32 with smart input handling;
-- supports legacy file encoding formats, e.g. CP 1250, EBCDIC.
-- offers methods for lex/syntax \ref errors;
-- easily integrates with Bison reentrant, C++, bridge and location parsers;
-- generates source code that is easy to understand;
-- generates thread-safe scanners;
-- generates graphviz files for visualization of finite state machines;
-- options for intuitive customization of the lexer class source code output;
-- efficient matching in direct code or with finite state machine tables;
-- optional "free space mode" to improve readability of lexer specifications;
-- regular expressions may contain lazy quantifiers;
-- regular expressions may contain word boundary anchors;
-- regular expressions may contain indent/dedent markers for matching;
-- other regex engines to choose from, such as PCRE2 and Boost.Regex;
-- released under a permissive open source license (BSD-3).
+The high-performance RE/flex regex library generates finite state machine
+tables or direct code to scan and search input efficiently.  RE/flex also
+includes a smart input class to normalize input from files, streams, strings,
+and memory to standard UTF-8 streams.
 
-RE/flex offers many other practical improvements over Flex++, such as:
+In a nutshell, the RE/flex lexical analyzer generator
 
-- no input buffer length limit (Flex has a 16KB limit);
+- extends Flex++ with Unicode and other new featues
+- accepts legacy Flex and Lex lexer specifications
+- is compliant to the IEEE POSIX P1003.2 standard on Lex specification input
+  (but generates C++ source code, like Flex++ does)
+- is faster than Flex++ for typical applications such as tokenization
+- supports Unicode, auto-detects UTF-8/16/32 with smart input handling
+- supports legacy file encoding formats, e.g. CP 1250, EBCDIC
+- includes methods for lex and syntax \ref errors
+- integrates with Bison reentrant, C++, bridge and location parsers
+- generates source code that is easy to understand
+- generates thread-safe scanners
+- generates graphviz files for visualization of finite state machines
+- supports easy customization of the lexer class source code output
+- is fast with direct code and deterministic finite state machines
+- supports "free space mode" to improve readability of lexer specifications
+- regular expressions may contain lazy quantifiers
+- regular expressions may contain word boundary anchors
+- regular expressions may contain indent/dedent markers for matching
+- offers other regex engines to choose from, such as PCRE2 and Boost.Regex
+- is released under a permissive open source license (BSD-3)
+
+RE/flex includes usability improvements over Flex++, such as:
+
+- no input buffer length limit (Flex has a 16K limit);
 - `yypush_buffer_state` saves the scanner state (line, column, and indentation
   positions), not just the input buffer;
 - new methods to analyze ASCII and Unicode input, such as `str()` and `wstr()`
@@ -72,8 +79,9 @@ with its matcher engine defined as a template parameter.
 
 RE/flex is compatible with Lex/Flex and Bison/Yacc with options `−−flex` and
 `−−bison`, respectively.  Option `−−yy` forces basic, no-frills Lex POSIX
-compliance.  RE/flex also offers specific options to seamlessly integrate Bison
-bridge, Bison locations, Bison C++, Bison complete, and reentrant parsers.
+compliance of the lexer input (but with C++ output).  RE/flex also offers
+specific options to seamlessly integrate Bison bridge, Bison locations, Bison
+C++, Bison complete, and reentrant parsers.
 
 In this document we refer to a *regex* as a shorthand for *regular expression*,
 However, a "regular expression" refers to the formal concept of *regular
@@ -82,14 +90,15 @@ that Perl introduced.  Both concepts are applicable to RE/flex patterns.
 
 In summary, RE/flex is really several things combined into one package:
 
-- a faster, feature-rich replacement of [Flex++ and Flex](dinosaur.compilertools.net/#flex);
+- a faster, feature-rich extension of Flex++.
 
 - a stand-alone regex library for fast regex matching in C++;
 
-- a C++ regex API enhancement of the [Boost.Regex](www.boost.org/libs/regex)
-  and [PCRE2](www.pcre.org) libraries for matching, seaching, splitting and
-  scanning of input, with input from (wide) strings, files, and streams of
-  potentially unlimited length.
+- a unified C++ regex API for the
+  [PCRE2](https://www.pcre.org), [Boost.Regex](https://www.boost.org/libs/regex)
+  and C++ `std::regex` libraries for matching, seaching, splitting and scanning
+  of input, with input from (wide) strings, files, and streams of potentially
+  unlimited length.
 
 The typographical conventions used by this document are:
 
@@ -211,7 +220,7 @@ scan over C/C++ source code input to match multiline comments that start with a
 </div>
 
 Another argument to use this code with Flex is that the internal Flex buffer is
-limited to 16KB.  By contrast, RE/flex buffers are dynamically resized and will
+limited to 16K.  By contrast, RE/flex buffers are dynamically resized and will
 never run out of buffer space to accept long matches.
 
 Workarounds such as these are not necessary with RE/flex.  The RE/flex scanners
@@ -255,13 +264,12 @@ In summary:
 - RE/flex specifications and use are compatible with Lex/Flex and Bison/Yacc.
 
 - The RE/flex scanner generator accepts specifications that are compatible with
-  [Flex](dinosaur.compilertools.net/#flex), with additional options to select a
-  matcher engine and to specify names and options for C++ class generation.
+  Flex, with additional options to select a matcher engine and to specify names
+  and options for C++ class generation.
   
 - The RE/flex scanner generator option `−−bison` generates a scanner compatible
-  with [Bison](dinosaur.compilertools.net/#bison).  RE/flex also offers options
-  to integrate Bison bridge, Bison locations, Bison complete, and reentrant
-  parsers.
+  with Bison.  RE/flex also offers options to integrate Bison bridge, Bison
+  locations, Bison complete, and reentrant parsers.
 
 - The regular expression syntax in Flex and Lex specifications is restricted to
   POSIX ERE.  By contrast, the RE/flex specification syntax is regex-centric by
@@ -297,8 +305,8 @@ and splitting input from strings, files and streams in regular C++ applications
 🔝 [Back to table of contents](#)
 
 
-And a flexible regex library                                          {#intro2}
-----------------------------
+A flexible regex library                                              {#intro2}
+------------------------
 
 The RE/flex regex pattern matching classes include two classes for Boost.Regex,
 two classes for PCRE2, two classes for C++11 std::regex, and a RE/flex class:
@@ -306,46 +314,52 @@ two classes for PCRE2, two classes for C++11 std::regex, and a RE/flex class:
   Engine        | Header file to include  | C++ matcher classes
   ------------- | ----------------------- | -----------------------------------
   RE/flex regex | `reflex/matcher.h`      | `Matcher`
-  Boost.Regex   | `reflex/boostmatcher.h` | `BoostMatcher`, `BoostPosixMatcher`
   PCRE2         | `reflex/pcre2matcher.h` | `PCRE2Matcher`, `PCRE2UTFMatcher`
+  Boost.Regex   | `reflex/boostmatcher.h` | `BoostMatcher`, `BoostPosixMatcher`
   std::regex    | `reflex/stdmatcher.h`   | `StdMatcher`, `StdPosixMatcher`
 
-The RE/flex `reflex::Matcher` class compiles regex patterns to efficient finite
-state machines (FSMs) when instantiated.  These deterministic automata speed up
-matching considerably, at the cost of the initial FSM construction (see further
-below for hints on how to avoid this run time overhead).  RE/flex matchers only
+The RE/flex `reflex::Matcher` class compiles regex patterns to efficient
+non-backtracking deterministic finite state machines (FSM) when instantiated.
+These deterministic finite automata (DFA) representations speed up matching
+considerably, at the cost of the initial FSM construction (see further below
+for hints on how to avoid this run time overhead).  RE/flex matchers only
 support POSIX mode matching, see \ref reflex-posix-perl.
 
-The `reflex::BoostMatcher` and `reflex::BoostPosixMatcher` classes are for Perl
-mode and POSIX mode matching, respectively.
+The `reflex::PCRE2Matcher` and `reflex::PCRE2UTFMatcher` classes are for
+efficient Perl mode matching with PCRE2 using JIT (just-in-time compilation),
+where the latter uses native PCRE2 Unicode matching with `PCRE2_UTF+PCRE2_UCP`.
+The PCRE2 matchers use JIT optimizations to speed up matching, which comes at a
+cost of extra processing when the matcher is instantiated.  The benefit
+outweighs the cost when many matches are processed.
 
-The `reflex::PCRE2Matcher` and `reflex::PCRE2UTFMatcher` classes are for Perl
-mode matching only, where the latter uses native PCRE2 Unicode matching with
-`PCRE2_UTF+PCRE2_UCP`.  The PCRE2 matchers use JIT optimizations to speed up
-matching, which comes at a cost of extra processing when the matcher is
-instantiated.  The benefit outweighs the cost when many matches are processed.
+The `reflex::BoostMatcher` and `reflex::BoostPosixMatcher` classes are for Perl
+mode and POSIX mode matching using the Boost Regex library, respectively.
 
 C++11 std::regex supports ECMAScript and AWK POSIX syntax with the `StdMatcher`
 and `reflex::StdPosixMatcher` classes respectively.  The std::regex syntax is
-therefore a lot more limited compared to Boost.Regex, PCRE2, and RE/flex.
+therefore a lot more limited compared to PCRE2, Boost.Regex, and RE/flex.
+These regex matchers are considerably slower compared to the other matchers.
 
 The RE/flex regex common interface API is implemented in an abstract base class
-template `reflex::AbstractMatcher` from which regex matchers are derived.  This
-regex API offers a common interface that is used in the generated scanner.  You
-can also use this API in your C++ application for pattern matching.
+template `reflex::AbstractMatcher` from which all regex matcher engine classes
+are derived.  This regex API offers a uniform common interface.  This interface
+is used in the generated scanner.  You can also use this uniform API in your
+C++ application for pattern matching with any of the regex libraries without
+having to use library-specific API calls to do so.
 
 The RE/flex abstract matcher offers four operations for matching with the regex
-engines that are derived from this base abstract class:
+engines derived from this base abstract class:
 
   Method      | Result
   ----------- | ---------------------------------------------------------------
   `matches()` | returns nonzero if the input from begin to end matches
-  `find()`    | search input and return nonzero if a match was found
+  `find()`    | search the given input and return nonzero if a match was found
   `scan()`    | return nonzero if input at current position matches partially
   `split()`   | return nonzero for a split of the input at the next match
 
 These methods return a nonzero value for a match, meaning the `size_t accept()`
-value, and are repeatable, where the last three return additional matches.
+value that identifies the regex group pattern that matched.  The methods are
+repeatable, where the last three return additional matches found when repeated.
 
 For example, to check if a string is a valid date using Boost.Regex:
 
@@ -493,11 +507,11 @@ The regex engines currently available as classes in the `reflex` namespace are:
   Class               | Mode  | Engine        | Performance
   ------------------- | ----- |-------------- | ---------------------------------
   `Matcher`           | POSIX | RE/flex lib   | deterministic finite automaton, no backtracking
+  `PCRE2Matcher`      | Perl  | PCRE2         | JIT-optimized backtracking
+  `PCRE2UTFMatcher`   | Perl  | PCRE2 UTF+UPC | JIT-optimized backtracking
   `BoostMatcher`      | Perl  | Boost.Regex   | backtracking
   `BoostPerlMatcher`  | Perl  | Boost.Regex   | backtracking
   `BoostPosixMatcher` | POSIX | Boost.Regex   | backtracking
-  `PCRE2Matcher`      | Perl  | PCRE2         | JIT-optimized backtracking
-  `PCRE2UTFMatcher`   | Perl  | PCRE2 UTF+UPC | JIT-optimized backtracking
   `StdMatcher`        | ECMA  | std::regex    | backtracking
   `StdEcmaMatcher`    | ECMA  | std::regex    | backtracking
   `StdPosixMatcher`   | POSIX | std::regex    | backtracking
@@ -613,11 +627,11 @@ We can use these RE/flex iterators in C++ for many tasks, including to populate
 containers by stuffing the iterator's text matches into it:
 
 ~~~{.cpp}
-    #include <reflex/pcre2matcher.h> // reflex::PCRE2Matcher, reflex::Input
+    #include <reflex/pcre2matcher.h> // reflex::PCRE2UTFMatcher, reflex::Input
     #include <vector>                // std::vector
 
-    // use a PCRE2Matcher to convert words of a sentence into a string vector
-    reflex::PCRE2Matcher matcher("\\w+", "How now brown cow.");
+    // use a PCRE2UTFMatcher to convert words of a sentence into a string vector
+    reflex::PCRE2UTFMatcher matcher("\\w+", "How now brown cow.");
     std::vector<std::string> words(matcher.find.begin(), matcher.find.end());
 ~~~
 
@@ -647,8 +661,8 @@ When executed this code prints:
     Found brown
     Found cow
 
-And RE/flex iterators are also useful with STL algorithms and lambdas, for
-example to compute a histogram of word frequencies:
+And RE/flex iterators are also useful with algorithms and lambdas, for example
+to compute a histogram of word frequencies:
 
 ~~~{.cpp}
     // Requires C++11, compile with: cc -std=c++11
@@ -686,6 +700,7 @@ This method and other methods may be used to obtain the details of a match:
   --------------- | ---------------------------------------------------------------
   `accept()`      | returns group capture index (or zero if not captured/matched)
   `text()`        | returns `const char*` to 0-terminated match (ends in `\0`)
+  `strview()`     | returns `std::string_view` text match (preserves `\0`s) (C++17)
   `str()`         | returns `std::string` text match (preserves `\0`s)
   `wstr()`        | returns `std::wstring` wide text match (converted from UTF-8)
   `chr()`         | returns first 8-bit char of the text match (`str()[0]` as int)
@@ -708,6 +723,7 @@ This method and other methods may be used to obtain the details of a match:
   `columno()`     | returns column number of the match in characters, starting at 0
   `lineno_end()`  | returns ending line number of the match, starting at line 1
   `columno_end()` | returns ending column number of the match, starting at 0
+  `bol()`         | returns `const char*` to begin of matching line (not 0-terminated)
   `border()`      | returns the byte offset from the start of the line of the match
   `first()`       | returns input position of the first character of the match
   `last()`        | returns input position + 1 of the last character of the match
@@ -749,7 +765,9 @@ When executed this code prints:
 @warning The `text()` method returns the match by pointing to the `const char*`
 string that is stored in an internal buffer.  This pointer *should not be used*
 after matching continues and when the matcher object is deallocated.  To retain
-the `text()` value use the `str()` method that returns a copy of `text()`.
+the `text()` value we recommend to use the `str()` method that returns a copy
+of `text()`.  Likewise, the `strview()` method returns the same `text()`
+pointer and should not be used after matching continues.
 
 @warning The `operator[]` method returns a pair with the match info of the n'th
 group, which is a non-0-terminated `const char*` pointer (or NULL) and its size
@@ -847,26 +865,25 @@ located at address `b` for in-place matching, where bytes `b[0...n]` are
 possibly modified by the matcher:
 
 ~~~{.cpp}
-    // read a 0-terminated buffer in place, buffer content is changed!!
-    char *base = ...;  // points to 0-terminated buffer
-    size_t size = ...; // length of the buffer including final \0 byte
+    // search data in place, data content is changed with text()!!
+    char *base = ...;  // points to the base address of the data
+    size_t size = ...; // length of the data including one extra byte for a final \0
     matcher.buffer(base, size);
     while (matcher.find() != 0)
       std::cout << "Found " << matcher.text() << std::endl;
 ~~~
 
-@warning `buffer(b, n)` reads `n`-1 bytes at address `b`.  The length `n`
-should include the final zero byte at the end of the string.
+@warning `buffer(b, n)` specifies `n`-1 bytes at address `b`.  The length `n`
+should include one extra byte that can be modified.
 
-@note In fact, the specified string may have any final byte value.  The final
-byte of the string will be set to zero when `text()` or `rest()` are used.
-Only `unput(c)`, `wunput()`, `text()`, `rest()`, and `span()` modify the buffer
-contents, because these functions require an extra byte at the end of the
-buffer to make the strings returned by these methods 0-terminated.  This means
-that we can specify read-only memory of `n` bytes located at address `b` by
-using `buffer(b, n+1)` safely as long as we do not use `unput()`, `unput()`,
-`text()`, `rest()`, and `span()`, for example to search read-only mmap(2)
-`PROT_READ` memory.
+@note The final byte of the specified data will be set to zero when `text()` or
+`rest()` are used.  Only `unput(c)`, `wunput()`, `text()`, `rest()`, and
+`span()` modify the buffer contents, because these functions require an extra
+byte at the end of the buffer to make the strings returned by these methods
+0-terminated.  This means that we can specify read-only memory of `n` bytes
+located at address `b` by using `buffer(b, n+1)` safely as long as we do not
+use `unput()`, `unput()`, `text()`, `rest()`, and `span()`, for example to
+search read-only mmap(2) `PROT_READ` memory.
 
 So far we explained how to use `reflex::PCRE2Matcher` and
 `reflex::BoostMatcher` for pattern matching.  We can also use the RE/flex
@@ -935,8 +952,10 @@ digraph FSM {
 }
 @enddot
 
-The `f=machine.cpp` option emits opcode tables for the finite state machine,
-which in this case is the following table of 11 code words:
+The `f=machine.cpp` option emits opcode tables for the FSM to match regular
+expressions efficiently.  The FSM matcher engine runs as a virtual machine to
+execute opcodes without backtracking.  In this case we get the following FSM
+table with eleven code words:
 
 ~~~{.cpp}
     REFLEX_CODE_DECL reflex_code_FSM[11] =
@@ -956,36 +975,37 @@ which in this case is the following table of 11 code words:
 ~~~
 
 Option `o` may be used with `f=machine.cpp` to emit optimized native C++ code
-for the finite state machine:
+for the FSM that gnerally runs faster than running the virtual machine on
+opcode tables:
 
 ~~~{.cpp}
     void reflex_code_FSM(reflex::Matcher& m)
     {
-      int c0 = 0, c1 = 0;
-      m.FSM_INIT(c1);
+      int c = 0;
+      m.FSM_INIT(c);
 
     S0:
-      c1 = m.FSM_CHAR();
-      if (97 <= c1 && c1 <= 122) goto S5;
-      if (c1 == 95) goto S5;
-      if (65 <= c1 && c1 <= 90) goto S5;
-      if (48 <= c1 && c1 <= 57) goto S5;
-      return m.FSM_HALT(c1);
+      c = m.FSM_CHAR();
+      if (97 <= c && c <= 122) goto S5;
+      if (c == 95) goto S5;
+      if (65 <= c && c <= 90) goto S5;
+      if (48 <= c && c <= 57) goto S5;
+      return m.FSM_HALT(c);
 
     S5:
       m.FSM_TAKE(1);
-      c1 = m.FSM_CHAR();
-      if (97 <= c1 && c1 <= 122) goto S5;
-      if (c1 == 95) goto S5;
-      if (65 <= c1 && c1 <= 90) goto S5;
-      if (48 <= c1 && c1 <= 57) goto S5;
-      return m.FSM_HALT(c1);
+      c = m.FSM_CHAR();
+      if (97 <= c && c <= 122) goto S5;
+      if (c == 95) goto S5;
+      if (65 <= c && c <= 90) goto S5;
+      if (48 <= c && c <= 57) goto S5;
+      return m.FSM_HALT(c);
     }
 ~~~
 
-The compact FSM opcode tables or the optimized larger FSM code may be used
-directly in your code.  This omits the FSM construction overhead at runtime.
-Simply include this generated file in your source code and pass it on to the
+The compact FSM opcode tables or the optimized FSM code may be used directly in
+your code.  This omits the FSM construction overhead at runtime.  Simply
+include this generated file in your source code and pass it on to the
 `reflex::Pattern` constructor:
 
 ~~~{.cpp}
@@ -1058,7 +1078,7 @@ PCRE2 for matching) to produce a scanner:
 We use option `−−header-file` to generate <i>`lex.yy.h`</i> to include in the
 source code of your lexer application:
 
-    reflex −−header-file lexerspec.l
+    reflex −−header-file=lexerspec.l
     c++ mylexer.cpp lex.yy.cpp -lreflex
 
 If `libreflex` was not installed then linking with `-lreflex` fails.  See
@@ -1136,7 +1156,7 @@ clean, readable, and reusable.
 Use <b>`reflex`</b> option `−−header-file` to generate <i>`lex.yy.h`</i> to
 include in the source code of your application:
 
-    reflex −−header-file lexerspec.l
+    reflex −−header-file=lexerspec.l
 
 The <b>`reflex`</b> command accepts `−−flex` and `−−bison` options for
 compatibility with Flex and Bison/Yacc, respectively.  These options allow
@@ -1150,10 +1170,10 @@ and functions.
 
 The second option `−−bison` generates a scanner class and the usual global "yy"
 variables and functions such as `yytext`, `yyleng`, `yylineno`, and `yylex()`
-for compatibility with non-reentrant [Bison](dinosaur.compilertools.net/#bison)
-parsers.  See \ref reflex-bison for more details on Bison parsers that are
-reentrant and/or use bison-bridge and bison-locations options.  For Bison 3.0
-C++ parsers, use `−−bison-cc` and optionally `−−bison-locations`.
+for compatibility with non-reentrant Bison parsers.  See \ref reflex-bison for
+more details on Bison parsers that are reentrant and/or use bison-bridge and
+bison-locations options.  For Bison 3.0 C++ parsers, use `−−bison-cc` and
+optionally `−−bison-locations`.
 
 Option `−−yy` enables both `−−flex` and `−−bison` and maximizes compatibility
 with Lex/Flex by generating the global `yyin` and `yyout` variables and global
@@ -1345,13 +1365,13 @@ matcher specified with option `-m`.
 
 #### `-T N`, `−−tabs=N`
 
-This option sets the default tab size to `N`, where `N` is 1, 2, 4, or 8.  The
-tab size is used internally to determine the column position for
-\ref reflex-pattern-dents matching and to determine the column position
-returned by `columno()`, `columno_end()`, and the number of columns returned by
-`columns()`.  It has no effect otherwise.  This option assigns the `T=N` value
-of the `reflex::Matcher` constructor options at runtime.  The value may be set
-at runtime with `matcher().tabs(N)` with `N` 1, 2, 4, or 8.
+This option sets the tab size to `N`, where `N` can be set to 1 (no expansion),
+2, 4, or 8.  The default tab size is 8.  The tab size determines the column
+position for \ref reflex-pattern-dents matching and to determine the column
+position returned by `columno()`, `columno_end()`, and the number of columns
+returned by `columns()`.  It has no effect otherwise.  This option assigns the
+`T=N` value of the `reflex::Matcher` constructor options at runtime.  The value
+may be set at runtime with `matcher().tabs(N)` with `N` 1, 2, 4, or 8.
 
 #### `-u`, `−−unicode`
 
@@ -1381,7 +1401,7 @@ This option saves the scanner to `FILE` instead of <i>`lex.yy.cpp`</i>.
 
 This option writes the scanner to stdout instead of to <i>`lex.yy.cpp`</i>.
 
-#### `−−graphs-file[=FILE]`
+#### `−−graphs-file[=FILE[.gv]]`
 
 (RE/flex matcher only).  This option generates a Graphviz file
 <i>`FILE.gv`</i>, where `FILE` is optional.  When `FILE` is omitted the
@@ -1433,11 +1453,11 @@ the next match.
 
 #### `−−header-file[=FILE]`
 
-This option generates a C++ header file <i>`FILE.h`</i> that declares the lexer
+This option generates a C++ header file <i>`FILE`</i> that declares the lexer
 class, in addition to the generated lexer class code, where `FILE` is optional.
 When `FILE` is omitted the <b>`reflex`</b> command generates <i>`lex.yy.h`</i>.
 
-#### `−−regexp-file[=FILE]`
+#### `−−regexp-file[=FILE[.txt]]`
 
 This option generates a text file <i>`FILE.txt`</i> that contains the scanner's
 regular expression patterns, where `FILE` is optional.  When `FILE` is omitted
@@ -1446,7 +1466,7 @@ condition state <i>`S`</i>.  The regular expression patterns are converted from
 the lexer specification and translated into valid C++ strings that can be used
 with a regex library for pattern matching.
 
-#### `−−tables-file[=FILE]`
+#### `−−tables-file[=FILE[.cpp]]`
 
 (RE/flex matcher only).  This option generates a C++ file <i>`FILE.cpp`</i>
 with the finite state machine in source code form, where `FILE` is optional.
@@ -1762,8 +1782,8 @@ Note that regex grouping with parenthesis to capture text matched by a
 parenthesized sub-regex is generally not supported by scanner generators, so we
 have to use the entire matched `text()` string.
 
-Flex and Lex do not support word boundary anchors `\<`, `\>`, `\b`, and `\B` so
-this example only works with RE/flex.
+Flex and Lex do not support word boundary anchors `\<`, `\>`, `\b`, and `\B`,
+so this example only works with RE/flex.
 
 If you are wondering about the action code in our example not exactly
 reflecting the C code expected with Flex, then rest assured that RE/flex
@@ -1916,29 +1936,36 @@ code that expands to the class name.  To do so, use <b>`reflex`</b> option
 `−−header-file` to generate a header file to include in your code.
 
 For example, we use these code injectors to make our cow counter `herd` part of
-the Lexer class state:
+the Lexer class state.  We also add a sound "Moo!" when a cow was matched, to
+illustrate the use of a static data member that is initialized ouf of line:
 
 <div class="alt">
 ~~~{.cpp}
     %option dotall main
 
     %top{
-      #include <iostream>    // std::cout etc.
+      #include <iostream>  // std::cout etc.
     }
 
     %class{
       int herd;  // lexer class member variable (private by default)
+      static const char *moo;  // a static data member
     }
 
     %init{
       herd = 0;  // initialize member variable in Lexer class constructor
     }
 
+    %{
+      const char *Lexer::moo = "Moo!";  // must be initialized out of line
+    %}
+
     cow        \<[Cc]ow\>
 
     %%
 
     {cow}      herd++;       // found a cow, bump count by one
+               out() << moo << " ";
     .          // do nothing
     <<EOF>>    out() << herd << " cows!" << std::endl; return 0;
 
@@ -1946,9 +1973,30 @@ the Lexer class state:
 ~~~
 </div>
 
-Note that nothing else needed to be changed, because the actions are part of
-the generated Lexer class and can access the Lexer class members, in this
-example the member variable `herd`.
+Note that nothing else needs to be changed, because the actions are part of
+the generated Lexer class and can access the Lexer class members, which in this
+example is the member variable `herd`.
+
+In this example, we just search for pattern matches and ignore everything else
+with a dot rule with no action.  This dot matches newlines too because we
+specified option `dotall`.  Searching for pattern matches like this example can
+be done much more efficiently with option `find` to generate a search engine
+instead of a scanner:
+
+<div class="alt">
+~~~{.cpp}
+    %option find main
+~~~
+</div>
+
+We should not forget to remove the dot rule from our lexer specification, otherwise
+we still match a lot that we don't need to match:
+
+<div class="alt">
+~~~{.cpp}
+    .          // do nothing REMOVE THIS LINE!
+~~~
+</div>
 
 To modularize specifications of lexers, use <i>`%%include`</i> (or <i>`%%i`</i>
 for short) to include one or more files into \ref reflex-spec-defs of a
@@ -2021,6 +2069,7 @@ are the classic Flex actions shown in the second column of this table:
   ------------------------ | -------------------- | -------------------------------
   `text()`                 | `YYText()`, `yytext` | 0-terminated text match
   `str()`                  | *n/a*                | `std::string` text match
+  `strview()`              | *n/a*                | `std::string_view` text match
   `wstr()`                 | *n/a*                | `std::wstring` wide text match
   `chr()`                  | `yytext[0]`          | first 8-bit char of text match
   `wchr()`                 | *n/a*                | first wide char of text match
@@ -2217,9 +2266,10 @@ used to obtain the context of a match, for example to display the line where a
 lexical error or syntax error occurred.
 
 @warning The methods `matcher().span()`, `matcher().line()`, and
-`matcher().wline()` invalidate the previous `text()`, `yytext`, `begin()`, and
-`end()` string pointers.  Call these methods again to retrieve the updated
-pointer or call `str()` or `wstr()` to obtain a string copy of the match:
+`matcher().wline()` invalidate the previous `text()`, `yytext`, `strview()`,
+`begin()`, `bol()`, and `end()` string pointers.  Call these methods again to
+retrieve the updated pointer or call `str()` or `wstr()` to obtain a string
+copy of the match:
 ~~~{.cpp}
     // INCORRECT, because t is invalid after line():
     const char *t = matcher().text();
@@ -2234,12 +2284,11 @@ pointer or call `str()` or `wstr()` to obtain a string copy of the match:
     const char *s = matcher().span();
     std::cout << t << " in " << s << std::endl;
 ~~~
-The start of a line is truncated when the line is too long.  The length of the
-line's contents before the pattern match on the line is restricted to 8KB,
-which is the size specified by `reflex::AbstractMatcher::Const::BLOCK`.  When
-this length is exceeded, the line's length before the match is truncated to
-8KB.  This ensures that pattern matching binary files or files with very long
-lines cannot cause memory allocation exceptions.
+The start of a line is truncated when the line is too long, longer than 256K
+which is the initial buffer size `reflex::AbstractMatcher::Const::BUFSZ`.  When
+this length is exceeded, the line's length before the match is truncated.  This
+ensures that pattern matching binary files or files with very long lines cannot
+cause memory allocation exceptions.
 
 Because `matcher()` returns the current matcher object, the following Flex-like
 actions are also supported:
@@ -2394,7 +2443,7 @@ patterns `φ` and `ψ`:
   Pattern   | Matches
   --------- | -----------------------------------------------------------------
   `x`       | matches the character `x`, where `x` is not a special character
-  `.`       | matches any single character except newline (unless in dotall mode)
+  `.`       | matches any single character or a byte, except newline (unless in dotall mode)
   `\.`      | matches `.` (dot), special characters are escaped with a backslash
   `\n`      | matches a newline, others are `\a` (BEL), `\b` (BS), `\t` (HT), `\v` (VT), `\f` (FF), and `\r` (CR)
   `\N`      | matches any single character except newline
@@ -2428,18 +2477,18 @@ patterns `φ` and `ψ`:
   `(?=φ)`   | matches `φ` without consuming it (\ref reflex-pattern-lookahead)
   `(?<=φ)`  | matches `φ` to the left without consuming it (\ref reflex-pattern-lookbehind, not supported by the RE/flex matcher)
   `(?^φ)`   | matches `φ` and ignores it, marking everything as a non-match to continue matching (RE/flex matcher only)
-  `^φ`      | matches `φ` at the begin of input or begin of a line (requires multi-line mode) (top-level `φ`, not nested in a sub-pattern)
-  `φ$`      | matches `φ` at the end of input or end of a line (requires multi-line mode) (top-level `φ`, not nested in a sub-pattern)
+  `^φ`      | matches `φ` at the begin of input or begin of a line (requires multi-line mode) (top-level `φ` only, not nested in a sub-pattern)
+  `φ$`      | matches `φ` at the end of input or end of a line (requires multi-line mode) (top-level `φ` only, not nested in a sub-pattern)
   `\Aφ`     | matches `φ` at the begin of input (top-level `φ`, not nested in a sub-pattern)
   `φ\z`     | matches `φ` at the end of input (top-level `φ`, not nested in a sub-pattern)
-  `\bφ`     | matches `φ` starting at a word boundary (top-level `φ`, not nested in a sub-pattern)
-  `φ\b`     | matches `φ` ending at a word boundary (top-level `φ`, not nested in a sub-pattern)
-  `\Bφ`     | matches `φ` starting at a non-word boundary (top-level `φ`, not nested in a sub-pattern)
-  `φ\B`     | matches `φ` ending at a non-word boundary (top-level `φ`, not nested in a sub-pattern)
-  `\<φ`     | matches `φ` that starts a word (top-level `φ`, not nested in a sub-pattern)
-  `\>φ`     | matches `φ` that starts a non-word (top-level `φ`, not nested in a sub-pattern)
-  `φ\<`     | matches `φ` that ends a non-word (top-level `φ`, not nested in a sub-pattern)
-  `φ\>`     | matches `φ` that ends a word (top-level `φ`, not nested in a sub-pattern)
+  `\bφ`     | matches `φ` starting at a word boundary
+  `φ\b`     | matches `φ` ending at a word boundary
+  `\Bφ`     | matches `φ` starting at a non-word boundary
+  `φ\B`     | matches `φ` ending at a non-word boundary
+  `\<φ`     | matches `φ` that starts a word
+  `\>φ`     | matches `φ` that starts a non-word
+  `φ\<`     | matches `φ` that ends a non-word
+  `φ\>`     | matches `φ` that ends a word
   `\i`      | matches an indent for \ref reflex-pattern-dents matching
   `\j`      | matches a dedent for \ref reflex-pattern-dents matching
   `\k`      | matches if indent depth changed, undoing this change to keep the current indent stops for \ref reflex-pattern-dents matching
@@ -2450,10 +2499,27 @@ patterns `φ` and `ψ`:
   `(?x:φ)`  | \ref reflex-pattern-freespace ignore all whitespace and comments in `φ`
   `(?#:X)`  | all of `X` is skipped as a comment
 
+Word boundaries `\<`, `\>`, `\b` and `\B` demarcate words.  Word characters are
+letters, digits, and the underscore.  Anchors `\A` and `\z` demarcate the begin
+and end of the input, respectively.  Anchors `^` and `$` demarcate the begin
+and end of a line, respectively, because multi-line mode is enabled by default
+in all RE/flex-generated scanners.  See also \ref reflex-pattern-anchor.
+
+Indentation matching with `\i`, `\j` and `\k` is a RE/flex feature available
+only with the RE/flex regex library that supports it.  See also \ref
+reflex-pattern-dents for more details.
+
 @note The lazy quantifier `?` for optional patterns `φ??` and repetitions `φ*?`
 `φ+?` is not supported by Boost.Regex in POSIX mode.  In general, POSIX
 matchers do not support lazy quantifiers due to POSIX limitations that are
-rooted in the theory of formal languages FSM of regular expressions.
+rooted in the theory of formal languages FSM of regular expressions.  The
+RE/flex regex library is regex POSIX compliant and supports lazy quantifiers as
+an addition.
+
+@warning Option `−−fast` does not produce code that backtracks, which means
+that patterns such as `bar.*\bfoo` that require backtracking on `\b` may not
+work properly.  If necessary, use option `−−full` when word boundaries are used
+when these require backtracking to find a match.
 
 The following patterns are available in RE/flex and adopt the same Flex/Lex
 patterns syntax.  These pattern should only be used in lexer specifications:
@@ -2559,7 +2625,8 @@ class after the character class operations are applied.  For example,
 Note that negated character classes such as `[^a-zA-Z]` match newlines when
 `\n` is not included in the class.  Include `\n` in the negated character class
 to prevent matching newlines.  The `reflex::convert_flag::notnewline` removes
-newlines from negated character classes when used with \ref regex-convert.
+newlines from character classes when used with \ref regex-convert, except for
+patterns `\P{C}`, `\R`, `\D`, `\H`, and `\W`.
 
 A lexer specification may use a defined name in place of the second operand of
 a character class operation.  A defined name when used as an operand should
@@ -2617,24 +2684,24 @@ characters only.
 
 The 7-bit ASCII POSIX character categories are:
 
-  POSIX form   | POSIX category    | Matches
-  ------------ | ----------------- | ---------------------------------------------
-  `[:ascii:]`  | `\p{ASCII}`       | matches any ASCII character
-  `[:space:]`  | `\p{Space}`       | matches a white space character `[ \t\n\v\f\r]`
-  `[:xdigit:]` | `\p{Xdigit}`      | matches a hex digit `[0-9A-Fa-f]`
-  `[:cntrl:]`  | `\p{Cntrl}`       | matches a control character `[\x00-\0x1f\x7f]`
-  `[:print:]`  | `\p{Print}`       | matches a printable character `[\x20-\x7e]`
-  `[:alnum:]`  | `\p{Alnum}`       | matches a alphanumeric character `[0-9A-Za-z]`
-  `[:alpha:]`  | `\p{Alpha}`       | matches a letter `[A-Za-z]`
-  `[:blank:]`  | `\p{Blank}`, `\h` | matches a blank `[ \t]`
-  `[:digit:]`  | `\p{Digit}`       | matches a digit `[0-9]`
-  `[:graph:]`  | `\p{Graph}`       | matches a visible character `[\x21-\x7e]`
-  `[:lower:]`  | `\p{Lower}`       | matches a lower case letter `[a-z]`
-  `[:punct:]`  | `\p{Punct}`       | matches a punctuation character `[\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]`
-  `[:upper:]`  | `\p{Upper}`       | matches an upper case letter `[A-Z]`
-  `[:word:]`   | `\p{Word}`        | matches a word character `[0-9A-Za-z_]`
-  `[:^blank:]` | `\P{Blank}`, `\H` | matches a non-blank character `[^ \t]`
-  `[:^digit:]` | `\P{Digit}`       | matches a non-digit `[^0-9]`
+  POSIX form   | Matches
+  ------------ | ---------------------------------------------
+  `[:ascii:]`  | matches any ASCII character
+  `[:space:]`  | matches a white space character `[ \t\n\v\f\r]`
+  `[:xdigit:]` | matches a hex digit `[0-9A-Fa-f]`
+  `[:cntrl:]`  | matches a control character `[\x00-\x1f\x7f]`
+  `[:print:]`  | matches a printable character `[\x20-\x7e]`
+  `[:alnum:]`  | matches a alphanumeric character `[0-9A-Za-z]`
+  `[:alpha:]`  | matches a letter `[A-Za-z]`
+  `[:blank:]`  | matches a blank character `\h` same as `[ \t]`
+  `[:digit:]`  | matches a digit `[0-9]`
+  `[:graph:]`  | matches a visible character `[\x21-\x7e]`
+  `[:lower:]`  | matches a lower case letter `[a-z]`
+  `[:punct:]`  | matches a punctuation character `[\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]`
+  `[:upper:]`  | matches an upper case letter `[A-Z]`
+  `[:word:]`   | matches a word character `[0-9A-Za-z_]`
+  `[:^blank:]` | matches a non-blank character `\H` same as `[^ \t]`
+  `[:^digit:]` | matches a non-digit `[^0-9]`
 
 The POSIX forms are used in bracket lists.  For example `[[:lower:][:digit:]]`
 matches an ASCII lower case letter or a digit.  
@@ -2655,18 +2722,20 @@ library:
 
   Unicode category                       | Matches
   -------------------------------------- | ------------------------------------
-  `.`                                    | matches any single Unicode character except newline (including \ref invalid-utf)
+  `.`                                    | matches any single character (or a byte in Unicode mode, see \ref invalid-utf)
   `\a`                                   | matches BEL U+0007
   `\d`                                   | matches a digit `\p{Nd}`
   `\D`                                   | matches a non-digit
   `\e`                                   | matches ESC U+001b
   `\f`                                   | matches FF U+000c
+  `\h`                                   | matches a blank `[ \t]`
+  `\H`                                   | matches a non-blank `[^ \t]`
   `\l`                                   | matches a lower case letter `\p{Ll}`
   `\n`                                   | matches LF U+000a
   `\N`                                   | matches any non-LF character
   `\r`                                   | matches CR U+000d
   `\R`                                   | matches a Unicode line break
-  `\s`                                   | matches a white space character `[ \t\v\f\r\x85\p{Z}]` excluding `\n`
+  `\s`                                   | matches a white space character `[ \t\n\v\f\r\x85\p{Z}]`
   `\S`                                   | matches a non-white space character
   `\t`                                   | matches TAB U+0009
   `\u`                                   | matches an upper case letter `\p{Lu}`
@@ -2674,10 +2743,9 @@ library:
   `\w`                                   | matches a Unicode word character `[\p{L}\p{Nd}\p{Pc}]`
   `\W`                                   | matches a non-Unicode word character
   `\X`                                   | matches any ISO-8859-1 or Unicode character
-  `\p{Space}`                            | matches a white space character `[ \t\n\v\f\r\x85\p{Z}]` including `\n`
+  `\p{Space}`                            | matches a white space character `[ \t\n\v\f\r\x85\p{Z}]`
   `\p{Unicode}`                          | matches any Unicode character U+0000 to U+10FFFF minus U+D800 to U+DFFF
   `\p{ASCII}`                            | matches an ASCII character U+0000 to U+007F
-  `\p{ASCII}`                            | matches an ASCII character U+0000 to U+007F)
   `\p{Non_ASCII_Unicode}`                | matches a non-ASCII character U+0080 to U+10FFFF minus U+D800 to U+DFFF)
   `\p{L&}`                               | matches a character with Unicode property L& (i.e. property Ll, Lu, or Lt)
   `\p{Letter}`,`\p{L}`                   | matches a character with Unicode property Letter
@@ -2727,328 +2795,328 @@ library:
 To specify a Unicode block as a category when using the `−−unicode` option, use
 `\p{IsBlockName}`.  The table below lists the block categories:
 
-  IsBlockName                                        | Unicode character range
-  -------------------------------------------------- | -----------------------
-  `\p{BasicLatin}`                                   | U+0000 to U+007F
-  `\p{Latin-1Supplement}`                            | U+0080 to U+00FF
-  `\p{LatinExtended-A}`                              | U+0100 to U+017F
-  `\p{LatinExtended-B}`                              | U+0180 to U+024F
-  `\p{IPAExtensions}`                                | U+0250 to U+02AF
-  `\p{SpacingModifierLetters}`                       | U+02B0 to U+02FF
-  `\p{CombiningDiacriticalMarks}`                    | U+0300 to U+036F
-  `\p{GreekandCoptic}`                               | U+0370 to U+03FF
-  `\p{Cyrillic}`                                     | U+0400 to U+04FF
-  `\p{CyrillicSupplement}`                           | U+0500 to U+052F
-  `\p{Armenian}`                                     | U+0530 to U+058F
-  `\p{Hebrew}`                                       | U+0590 to U+05FF
-  `\p{Arabic}`                                       | U+0600 to U+06FF
-  `\p{Syriac}`                                       | U+0700 to U+074F
-  `\p{ArabicSupplement}`                             | U+0750 to U+077F
-  `\p{Thaana}`                                       | U+0780 to U+07BF
-  `\p{NKo}`                                          | U+07C0 to U+07FF
-  `\p{Samaritan}`                                    | U+0800 to U+083F
-  `\p{Mandaic}`                                      | U+0840 to U+085F
-  `\p{SyriacSupplement}`                             | U+0860 to U+086F
-  `\p{ArabicExtended-B}`                             | U+0870 to U+089F
-  `\p{ArabicExtended-A}`                             | U+08A0 to U+08FF
-  `\p{Devanagari}`                                   | U+0900 to U+097F
-  `\p{Bengali}`                                      | U+0980 to U+09FF
-  `\p{Gurmukhi}`                                     | U+0A00 to U+0A7F
-  `\p{Gujarati}`                                     | U+0A80 to U+0AFF
-  `\p{Oriya}`                                        | U+0B00 to U+0B7F
-  `\p{Tamil}`                                        | U+0B80 to U+0BFF
-  `\p{Telugu}`                                       | U+0C00 to U+0C7F
-  `\p{Kannada}`                                      | U+0C80 to U+0CFF
-  `\p{Malayalam}`                                    | U+0D00 to U+0D7F
-  `\p{Sinhala}`                                      | U+0D80 to U+0DFF
-  `\p{Thai}`                                         | U+0E00 to U+0E7F
-  `\p{Lao}`                                          | U+0E80 to U+0EFF
-  `\p{Tibetan}`                                      | U+0F00 to U+0FFF
-  `\p{Myanmar}`                                      | U+1000 to U+109F
-  `\p{Georgian}`                                     | U+10A0 to U+10FF
-  `\p{HangulJamo}`                                   | U+1100 to U+11FF
-  `\p{Ethiopic}`                                     | U+1200 to U+137F
-  `\p{EthiopicSupplement}`                           | U+1380 to U+139F
-  `\p{Cherokee}`                                     | U+13A0 to U+13FF
-  `\p{UnifiedCanadianAboriginalSyllabics}`           | U+1400 to U+167F
-  `\p{Ogham}`                                        | U+1680 to U+169F
-  `\p{Runic}`                                        | U+16A0 to U+16FF
-  `\p{Tagalog}`                                      | U+1700 to U+171F
-  `\p{Hanunoo}`                                      | U+1720 to U+173F
-  `\p{Buhid}`                                        | U+1740 to U+175F
-  `\p{Tagbanwa}`                                     | U+1760 to U+177F
-  `\p{Khmer}`                                        | U+1780 to U+17FF
-  `\p{Mongolian}`                                    | U+1800 to U+18AF
-  `\p{UnifiedCanadianAboriginalSyllabicsExtended}`   | U+18B0 to U+18FF
-  `\p{Limbu}`                                        | U+1900 to U+194F
-  `\p{TaiLe}`                                        | U+1950 to U+197F
-  `\p{NewTaiLue}`                                    | U+1980 to U+19DF
-  `\p{KhmerSymbols}`                                 | U+19E0 to U+19FF
-  `\p{Buginese}`                                     | U+1A00 to U+1A1F
-  `\p{TaiTham}`                                      | U+1A20 to U+1AAF
-  `\p{CombiningDiacriticalMarksExtended}`            | U+1AB0 to U+1AFF
-  `\p{Balinese}`                                     | U+1B00 to U+1B7F
-  `\p{Sundanese}`                                    | U+1B80 to U+1BBF
-  `\p{Batak}`                                        | U+1BC0 to U+1BFF
-  `\p{Lepcha}`                                       | U+1C00 to U+1C4F
-  `\p{OlChiki}`                                      | U+1C50 to U+1C7F
-  `\p{CyrillicExtended-C}`                           | U+1C80 to U+1C8F
-  `\p{GeorgianExtended}`                             | U+1C90 to U+1CBF
-  `\p{SundaneseSupplement}`                          | U+1CC0 to U+1CCF
-  `\p{VedicExtensions}`                              | U+1CD0 to U+1CFF
-  `\p{PhoneticExtensions}`                           | U+1D00 to U+1D7F
-  `\p{PhoneticExtensionsSupplement}`                 | U+1D80 to U+1DBF
-  `\p{CombiningDiacriticalMarksSupplement}`          | U+1DC0 to U+1DFF
-  `\p{LatinExtendedAdditional}`                      | U+1E00 to U+1EFF
-  `\p{GreekExtended}`                                | U+1F00 to U+1FFF
-  `\p{GeneralPunctuation}`                           | U+2000 to U+206F
-  `\p{SuperscriptsandSubscripts}`                    | U+2070 to U+209F
-  `\p{CurrencySymbols}`                              | U+20A0 to U+20CF
-  `\p{CombiningDiacriticalMarksforSymbols}`          | U+20D0 to U+20FF
-  `\p{LetterlikeSymbols}`                            | U+2100 to U+214F
-  `\p{NumberForms}`                                  | U+2150 to U+218F
-  `\p{Arrows}`                                       | U+2190 to U+21FF
-  `\p{MathematicalOperators}`                        | U+2200 to U+22FF
-  `\p{MiscellaneousTechnical}`                       | U+2300 to U+23FF
-  `\p{ControlPictures}`                              | U+2400 to U+243F
-  `\p{OpticalCharacterRecognition}`                  | U+2440 to U+245F
-  `\p{EnclosedAlphanumerics}`                        | U+2460 to U+24FF
-  `\p{BoxDrawing}`                                   | U+2500 to U+257F
-  `\p{BlockElements}`                                | U+2580 to U+259F
-  `\p{GeometricShapes}`                              | U+25A0 to U+25FF
-  `\p{MiscellaneousSymbols}`                         | U+2600 to U+26FF
-  `\p{Dingbats}`                                     | U+2700 to U+27BF
-  `\p{MiscellaneousMathematicalSymbols-A}`           | U+27C0 to U+27EF
-  `\p{SupplementalArrows-A}`                         | U+27F0 to U+27FF
-  `\p{BraillePatterns}`                              | U+2800 to U+28FF
-  `\p{SupplementalArrows-B}`                         | U+2900 to U+297F
-  `\p{MiscellaneousMathematicalSymbols-B}`           | U+2980 to U+29FF
-  `\p{SupplementalMathematicalOperators}`            | U+2A00 to U+2AFF
-  `\p{MiscellaneousSymbolsandArrows}`                | U+2B00 to U+2BFF
-  `\p{Glagolitic}`                                   | U+2C00 to U+2C5F
-  `\p{LatinExtended-C}`                              | U+2C60 to U+2C7F
-  `\p{Coptic}`                                       | U+2C80 to U+2CFF
-  `\p{GeorgianSupplement}`                           | U+2D00 to U+2D2F
-  `\p{Tifinagh}`                                     | U+2D30 to U+2D7F
-  `\p{EthiopicExtended}`                             | U+2D80 to U+2DDF
-  `\p{CyrillicExtended-A}`                           | U+2DE0 to U+2DFF
-  `\p{SupplementalPunctuation}`                      | U+2E00 to U+2E7F
-  `\p{CJKRadicalsSupplement}`                        | U+2E80 to U+2EFF
-  `\p{KangxiRadicals}`                               | U+2F00 to U+2FDF
-  `\p{IdeographicDescriptionCharacters}`             | U+2FF0 to U+2FFF
-  `\p{CJKSymbolsandPunctuation}`                     | U+3000 to U+303F
-  `\p{Hiragana}`                                     | U+3040 to U+309F
-  `\p{Katakana}`                                     | U+30A0 to U+30FF
-  `\p{Bopomofo}`                                     | U+3100 to U+312F
-  `\p{HangulCompatibilityJamo}`                      | U+3130 to U+318F
-  `\p{Kanbun}`                                       | U+3190 to U+319F
-  `\p{BopomofoExtended}`                             | U+31A0 to U+31BF
-  `\p{CJKStrokes}`                                   | U+31C0 to U+31EF
-  `\p{KatakanaPhoneticExtensions}`                   | U+31F0 to U+31FF
-  `\p{EnclosedCJKLettersandMonths}`                  | U+3200 to U+32FF
-  `\p{CJKCompatibility}`                             | U+3300 to U+33FF
-  `\p{CJKUnifiedIdeographsExtensionA}`               | U+3400 to U+4DBF
-  `\p{YijingHexagramSymbols}`                        | U+4DC0 to U+4DFF
-  `\p{CJKUnifiedIdeographs}`                         | U+4E00 to U+9FFF
-  `\p{YiSyllables}`                                  | U+A000 to U+A48F
-  `\p{YiRadicals}`                                   | U+A490 to U+A4CF
-  `\p{Lisu}`                                         | U+A4D0 to U+A4FF
-  `\p{Vai}`                                          | U+A500 to U+A63F
-  `\p{CyrillicExtended-B}`                           | U+A640 to U+A69F
-  `\p{Bamum}`                                        | U+A6A0 to U+A6FF
-  `\p{ModifierToneLetters}`                          | U+A700 to U+A71F
-  `\p{LatinExtended-D}`                              | U+A720 to U+A7FF
-  `\p{SylotiNagri}`                                  | U+A800 to U+A82F
-  `\p{CommonIndicNumberForms}`                       | U+A830 to U+A83F
-  `\p{Phags-pa}`                                     | U+A840 to U+A87F
-  `\p{Saurashtra}`                                   | U+A880 to U+A8DF
-  `\p{DevanagariExtended}`                           | U+A8E0 to U+A8FF
-  `\p{KayahLi}`                                      | U+A900 to U+A92F
-  `\p{Rejang}`                                       | U+A930 to U+A95F
-  `\p{HangulJamoExtended-A}`                         | U+A960 to U+A97F
-  `\p{Javanese}`                                     | U+A980 to U+A9DF
-  `\p{MyanmarExtended-B}`                            | U+A9E0 to U+A9FF
-  `\p{Cham}`                                         | U+AA00 to U+AA5F
-  `\p{MyanmarExtended-A}`                            | U+AA60 to U+AA7F
-  `\p{TaiViet}`                                      | U+AA80 to U+AADF
-  `\p{MeeteiMayekExtensions}`                        | U+AAE0 to U+AAFF
-  `\p{EthiopicExtended-A}`                           | U+AB00 to U+AB2F
-  `\p{LatinExtended-E}`                              | U+AB30 to U+AB6F
-  `\p{CherokeeSupplement}`                           | U+AB70 to U+ABBF
-  `\p{MeeteiMayek}`                                  | U+ABC0 to U+ABFF
-  `\p{HangulSyllables}`                              | U+AC00 to U+D7AF
-  `\p{HangulJamoExtended-B}`                         | U+D7B0 to U+D7FF
-  `\p{HighSurrogates}`                               | U+D800 to U+DB7F
-  `\p{HighPrivateUseSurrogates}`                     | U+DB80 to U+DBFF
-  `\p{LowSurrogates}`                                | U+DC00 to U+DFFF
-  `\p{PrivateUseArea}`                               | U+E000 to U+F8FF
-  `\p{CJKCompatibilityIdeographs}`                   | U+F900 to U+FAFF
-  `\p{AlphabeticPresentationForms}`                  | U+FB00 to U+FB4F
-  `\p{ArabicPresentationForms-A}`                    | U+FB50 to U+FDFF
-  `\p{VariationSelectors}`                           | U+FE00 to U+FE0F
-  `\p{VerticalForms}`                                | U+FE10 to U+FE1F
-  `\p{CombiningHalfMarks}`                           | U+FE20 to U+FE2F
-  `\p{CJKCompatibilityForms}`                        | U+FE30 to U+FE4F
-  `\p{SmallFormVariants}`                            | U+FE50 to U+FE6F
-  `\p{ArabicPresentationForms-B}`                    | U+FE70 to U+FEFF
-  `\p{HalfwidthandFullwidthForms}`                   | U+FF00 to U+FFEF
-  `\p{Specials}`                                     | U+FFF0 to U+FFFF
-  `\p{LinearBSyllabary}`                             | U+10000 to U+1007F
-  `\p{LinearBIdeograms}`                             | U+10080 to U+100FF
-  `\p{AegeanNumbers}`                                | U+10100 to U+1013F
-  `\p{AncientGreekNumbers}`                          | U+10140 to U+1018F
-  `\p{AncientSymbols}`                               | U+10190 to U+101CF
-  `\p{PhaistosDisc}`                                 | U+101D0 to U+101FF
-  `\p{Lycian}`                                       | U+10280 to U+1029F
-  `\p{Carian}`                                       | U+102A0 to U+102DF
-  `\p{CopticEpactNumbers}`                           | U+102E0 to U+102FF
-  `\p{OldItalic}`                                    | U+10300 to U+1032F
-  `\p{Gothic}`                                       | U+10330 to U+1034F
-  `\p{OldPermic}`                                    | U+10350 to U+1037F
-  `\p{Ugaritic}`                                     | U+10380 to U+1039F
-  `\p{OldPersian}`                                   | U+103A0 to U+103DF
-  `\p{Deseret}`                                      | U+10400 to U+1044F
-  `\p{Shavian}`                                      | U+10450 to U+1047F
-  `\p{Osmanya}`                                      | U+10480 to U+104AF
-  `\p{Osage}`                                        | U+104B0 to U+104FF
-  `\p{Elbasan}`                                      | U+10500 to U+1052F
-  `\p{CaucasianAlbanian}`                            | U+10530 to U+1056F
-  `\p{Vithkuqi}`                                     | U+10570 to U+105BF
-  `\p{LinearA}`                                      | U+10600 to U+1077F
-  `\p{LatinExtended-F}`                              | U+10780 to U+107BF
-  `\p{CypriotSyllabary}`                             | U+10800 to U+1083F
-  `\p{ImperialAramaic}`                              | U+10840 to U+1085F
-  `\p{Palmyrene}`                                    | U+10860 to U+1087F
-  `\p{Nabataean}`                                    | U+10880 to U+108AF
-  `\p{Hatran}`                                       | U+108E0 to U+108FF
-  `\p{Phoenician}`                                   | U+10900 to U+1091F
-  `\p{Lydian}`                                       | U+10920 to U+1093F
-  `\p{MeroiticHieroglyphs}`                          | U+10980 to U+1099F
-  `\p{MeroiticCursive}`                              | U+109A0 to U+109FF
-  `\p{Kharoshthi}`                                   | U+10A00 to U+10A5F
-  `\p{OldSouthArabian}`                              | U+10A60 to U+10A7F
-  `\p{OldNorthArabian}`                              | U+10A80 to U+10A9F
-  `\p{Manichaean}`                                   | U+10AC0 to U+10AFF
-  `\p{Avestan}`                                      | U+10B00 to U+10B3F
-  `\p{InscriptionalParthian}`                        | U+10B40 to U+10B5F
-  `\p{InscriptionalPahlavi}`                         | U+10B60 to U+10B7F
-  `\p{PsalterPahlavi}`                               | U+10B80 to U+10BAF
-  `\p{OldTurkic}`                                    | U+10C00 to U+10C4F
-  `\p{OldHungarian}`                                 | U+10C80 to U+10CFF
-  `\p{HanifiRohingya}`                               | U+10D00 to U+10D3F
-  `\p{RumiNumeralSymbols}`                           | U+10E60 to U+10E7F
-  `\p{Yezidi}`                                       | U+10E80 to U+10EBF
-  `\p{OldSogdian}`                                   | U+10F00 to U+10F2F
-  `\p{Sogdian}`                                      | U+10F30 to U+10F6F
-  `\p{OldUyghur}`                                    | U+10F70 to U+10FAF
-  `\p{Chorasmian}`                                   | U+10FB0 to U+10FDF
-  `\p{Elymaic}`                                      | U+10FE0 to U+10FFF
-  `\p{Brahmi}`                                       | U+11000 to U+1107F
-  `\p{Kaithi}`                                       | U+11080 to U+110CF
-  `\p{SoraSompeng}`                                  | U+110D0 to U+110FF
-  `\p{Chakma}`                                       | U+11100 to U+1114F
-  `\p{Mahajani}`                                     | U+11150 to U+1117F
-  `\p{Sharada}`                                      | U+11180 to U+111DF
-  `\p{SinhalaArchaicNumbers}`                        | U+111E0 to U+111FF
-  `\p{Khojki}`                                       | U+11200 to U+1124F
-  `\p{Multani}`                                      | U+11280 to U+112AF
-  `\p{Khudawadi}`                                    | U+112B0 to U+112FF
-  `\p{Grantha}`                                      | U+11300 to U+1137F
-  `\p{Newa}`                                         | U+11400 to U+1147F
-  `\p{Tirhuta}`                                      | U+11480 to U+114DF
-  `\p{Siddham}`                                      | U+11580 to U+115FF
-  `\p{Modi}`                                         | U+11600 to U+1165F
-  `\p{MongolianSupplement}`                          | U+11660 to U+1167F
-  `\p{Takri}`                                        | U+11680 to U+116CF
-  `\p{Ahom}`                                         | U+11700 to U+1174F
-  `\p{Dogra}`                                        | U+11800 to U+1184F
-  `\p{WarangCiti}`                                   | U+118A0 to U+118FF
-  `\p{DivesAkuru}`                                   | U+11900 to U+1195F
-  `\p{Nandinagari}`                                  | U+119A0 to U+119FF
-  `\p{ZanabazarSquare}`                              | U+11A00 to U+11A4F
-  `\p{Soyombo}`                                      | U+11A50 to U+11AAF
-  `\p{UnifiedCanadianAboriginalSyllabicsExtended-A}` | U+11AB0 to U+11ABF
-  `\p{PauCinHau}`                                    | U+11AC0 to U+11AFF
-  `\p{Bhaiksuki}`                                    | U+11C00 to U+11C6F
-  `\p{Marchen}`                                      | U+11C70 to U+11CBF
-  `\p{MasaramGondi}`                                 | U+11D00 to U+11D5F
-  `\p{GunjalaGondi}`                                 | U+11D60 to U+11DAF
-  `\p{Makasar}`                                      | U+11EE0 to U+11EFF
-  `\p{LisuSupplement}`                               | U+11FB0 to U+11FBF
-  `\p{TamilSupplement}`                              | U+11FC0 to U+11FFF
-  `\p{Cuneiform}`                                    | U+12000 to U+123FF
-  `\p{CuneiformNumbersandPunctuation}`               | U+12400 to U+1247F
-  `\p{EarlyDynasticCuneiform}`                       | U+12480 to U+1254F
-  `\p{Cypro-Minoan}`                                 | U+12F90 to U+12FFF
-  `\p{EgyptianHieroglyphs}`                          | U+13000 to U+1342F
-  `\p{EgyptianHieroglyphFormatControls}`             | U+13430 to U+1343F
-  `\p{AnatolianHieroglyphs}`                         | U+14400 to U+1467F
-  `\p{BamumSupplement}`                              | U+16800 to U+16A3F
-  `\p{Mro}`                                          | U+16A40 to U+16A6F
-  `\p{Tangsa}`                                       | U+16A70 to U+16ACF
-  `\p{BassaVah}`                                     | U+16AD0 to U+16AFF
-  `\p{PahawhHmong}`                                  | U+16B00 to U+16B8F
-  `\p{Medefaidrin}`                                  | U+16E40 to U+16E9F
-  `\p{Miao}`                                         | U+16F00 to U+16F9F
-  `\p{IdeographicSymbolsandPunctuation}`             | U+16FE0 to U+16FFF
-  `\p{Tangut}`                                       | U+17000 to U+187FF
-  `\p{TangutComponents}`                             | U+18800 to U+18AFF
-  `\p{KhitanSmallScript}`                            | U+18B00 to U+18CFF
-  `\p{TangutSupplement}`                             | U+18D00 to U+18D7F
-  `\p{KanaExtended-B}`                               | U+1AFF0 to U+1AFFF
-  `\p{KanaSupplement}`                               | U+1B000 to U+1B0FF
-  `\p{KanaExtended-A}`                               | U+1B100 to U+1B12F
-  `\p{SmallKanaExtension}`                           | U+1B130 to U+1B16F
-  `\p{Nushu}`                                        | U+1B170 to U+1B2FF
-  `\p{Duployan}`                                     | U+1BC00 to U+1BC9F
-  `\p{ShorthandFormatControls}`                      | U+1BCA0 to U+1BCAF
-  `\p{ZnamennyMusicalNotation}`                      | U+1CF00 to U+1CFCF
-  `\p{ByzantineMusicalSymbols}`                      | U+1D000 to U+1D0FF
-  `\p{MusicalSymbols}`                               | U+1D100 to U+1D1FF
-  `\p{AncientGreekMusicalNotation}`                  | U+1D200 to U+1D24F
-  `\p{MayanNumerals}`                                | U+1D2E0 to U+1D2FF
-  `\p{TaiXuanJingSymbols}`                           | U+1D300 to U+1D35F
-  `\p{CountingRodNumerals}`                          | U+1D360 to U+1D37F
-  `\p{MathematicalAlphanumericSymbols}`              | U+1D400 to U+1D7FF
-  `\p{SuttonSignWriting}`                            | U+1D800 to U+1DAAF
-  `\p{LatinExtended-G}`                              | U+1DF00 to U+1DFFF
-  `\p{GlagoliticSupplement}`                         | U+1E000 to U+1E02F
-  `\p{NyiakengPuachueHmong}`                         | U+1E100 to U+1E14F
-  `\p{Toto}`                                         | U+1E290 to U+1E2BF
-  `\p{Wancho}`                                       | U+1E2C0 to U+1E2FF
-  `\p{EthiopicExtended-B}`                           | U+1E7E0 to U+1E7FF
-  `\p{MendeKikakui}`                                 | U+1E800 to U+1E8DF
-  `\p{Adlam}`                                        | U+1E900 to U+1E95F
-  `\p{IndicSiyaqNumbers}`                            | U+1EC70 to U+1ECBF
-  `\p{OttomanSiyaqNumbers}`                          | U+1ED00 to U+1ED4F
-  `\p{ArabicMathematicalAlphabeticSymbols}`          | U+1EE00 to U+1EEFF
-  `\p{MahjongTiles}`                                 | U+1F000 to U+1F02F
-  `\p{DominoTiles}`                                  | U+1F030 to U+1F09F
-  `\p{PlayingCards}`                                 | U+1F0A0 to U+1F0FF
-  `\p{EnclosedAlphanumericSupplement}`               | U+1F100 to U+1F1FF
-  `\p{EnclosedIdeographicSupplement}`                | U+1F200 to U+1F2FF
-  `\p{MiscellaneousSymbolsandPictographs}`           | U+1F300 to U+1F5FF
-  `\p{Emoticons}`                                    | U+1F600 to U+1F64F
-  `\p{OrnamentalDingbats}`                           | U+1F650 to U+1F67F
-  `\p{TransportandMapSymbols}`                       | U+1F680 to U+1F6FF
-  `\p{AlchemicalSymbols}`                            | U+1F700 to U+1F77F
-  `\p{GeometricShapesExtended}`                      | U+1F780 to U+1F7FF
-  `\p{SupplementalArrows-C}`                         | U+1F800 to U+1F8FF
-  `\p{SupplementalSymbolsandPictographs}`            | U+1F900 to U+1F9FF
-  `\p{ChessSymbols}`                                 | U+1FA00 to U+1FA6F
-  `\p{SymbolsandPictographsExtended-A}`              | U+1FA70 to U+1FAFF
-  `\p{SymbolsforLegacyComputing}`                    | U+1FB00 to U+1FBFF
-  `\p{CJKUnifiedIdeographsExtensionB}`               | U+20000 to U+2A6DF
-  `\p{CJKUnifiedIdeographsExtensionC}`               | U+2A700 to U+2B73F
-  `\p{CJKUnifiedIdeographsExtensionD}`               | U+2B740 to U+2B81F
-  `\p{CJKUnifiedIdeographsExtensionE}`               | U+2B820 to U+2CEAF
-  `\p{CJKUnifiedIdeographsExtensionF}`               | U+2CEB0 to U+2EBEF
-  `\p{CJKCompatibilityIdeographsSupplement}`         | U+2F800 to U+2FA1F
-  `\p{CJKUnifiedIdeographsExtensionG}`               | U+30000 to U+3134F
-  `\p{Tags}`                                         | U+E0000 to U+E007F
-  `\p{VariationSelectorsSupplement}`                 | U+E0100 to U+E01EF
-  `\p{SupplementaryPrivateUseArea-A}`                | U+F0000 to U+FFFFF
-  `\p{SupplementaryPrivateUseArea-B}`                | U+100000 to U+10FFFF
+  IsBlockName                                         | Unicode character range
+  --------------------------------------------------- | -----------------------
+  `\p{IsBasicLatin}`                                  | U+0000 to U+007F
+  `\p{IsLatin-1Supplement}`                           | U+0080 to U+00FF
+  `\p{IsLatinExtended-A}`                             | U+0100 to U+017F
+  `\p{IsLatinExtended-B}`                             | U+0180 to U+024F
+  `\p{IsIPAExtensions}`                               | U+0250 to U+02AF
+  `\p{IsSpacingModifierLetters}`                      | U+02B0 to U+02FF
+  `\p{IsCombiningDiacriticalMarks}`                   | U+0300 to U+036F
+  `\p{IsGreekandCoptic}`                              | U+0370 to U+03FF
+  `\p{IsCyrillic}`                                    | U+0400 to U+04FF
+  `\p{IsCyrillicSupplement}`                          | U+0500 to U+052F
+  `\p{IsArmenian}`                                    | U+0530 to U+058F
+  `\p{IsHebrew}`                                      | U+0590 to U+05FF
+  `\p{IsArabic}`                                      | U+0600 to U+06FF
+  `\p{IsSyriac}`                                      | U+0700 to U+074F
+  `\p{IsArabicSupplement}`                            | U+0750 to U+077F
+  `\p{IsThaana}`                                      | U+0780 to U+07BF
+  `\p{IsNKo}`                                         | U+07C0 to U+07FF
+  `\p{IsSamaritan}`                                   | U+0800 to U+083F
+  `\p{IsMandaic}`                                     | U+0840 to U+085F
+  `\p{IsSyriacSupplement}`                            | U+0860 to U+086F
+  `\p{IsArabicExtended-B}`                            | U+0870 to U+089F
+  `\p{IsArabicExtended-A}`                            | U+08A0 to U+08FF
+  `\p{IsDevanagari}`                                  | U+0900 to U+097F
+  `\p{IsBengali}`                                     | U+0980 to U+09FF
+  `\p{IsGurmukhi}`                                    | U+0A00 to U+0A7F
+  `\p{IsGujarati}`                                    | U+0A80 to U+0AFF
+  `\p{IsOriya}`                                       | U+0B00 to U+0B7F
+  `\p{IsTamil}`                                       | U+0B80 to U+0BFF
+  `\p{IsTelugu}`                                      | U+0C00 to U+0C7F
+  `\p{IsKannada}`                                     | U+0C80 to U+0CFF
+  `\p{IsMalayalam}`                                   | U+0D00 to U+0D7F
+  `\p{IsSinhala}`                                     | U+0D80 to U+0DFF
+  `\p{IsThai}`                                        | U+0E00 to U+0E7F
+  `\p{IsLao}`                                         | U+0E80 to U+0EFF
+  `\p{IsTibetan}`                                     | U+0F00 to U+0FFF
+  `\p{IsMyanmar}`                                     | U+1000 to U+109F
+  `\p{IsGeorgian}`                                    | U+10A0 to U+10FF
+  `\p{IsHangulJamo}`                                  | U+1100 to U+11FF
+  `\p{IsEthiopic}`                                    | U+1200 to U+137F
+  `\p{IsEthiopicSupplement}`                          | U+1380 to U+139F
+  `\p{IsCherokee}`                                    | U+13A0 to U+13FF
+  `\p{IsUnifiedCanadianAboriginalSyllabics}`          | U+1400 to U+167F
+  `\p{IsOgham}`                                       | U+1680 to U+169F
+  `\p{IsRunic}`                                       | U+16A0 to U+16FF
+  `\p{IsTagalog}`                                     | U+1700 to U+171F
+  `\p{IsHanunoo}`                                     | U+1720 to U+173F
+  `\p{IsBuhid}`                                       | U+1740 to U+175F
+  `\p{IsTagbanwa}`                                    | U+1760 to U+177F
+  `\p{IsKhmer}`                                       | U+1780 to U+17FF
+  `\p{IsMongolian}`                                   | U+1800 to U+18AF
+  `\p{IsUnifiedCanadianAboriginalSyllabicsExtended}`  | U+18B0 to U+18FF
+  `\p{IsLimbu}`                                       | U+1900 to U+194F
+  `\p{IsTaiLe}`                                       | U+1950 to U+197F
+  `\p{IsNewTaiLue}`                                   | U+1980 to U+19DF
+  `\p{IsKhmerSymbols}`                                | U+19E0 to U+19FF
+  `\p{IsBuginese}`                                    | U+1A00 to U+1A1F
+  `\p{IsTaiTham}`                                     | U+1A20 to U+1AAF
+  `\p{IsCombiningDiacriticalMarksExtended}`           | U+1AB0 to U+1AFF
+  `\p{IsBalinese}`                                    | U+1B00 to U+1B7F
+  `\p{IsSundanese}`                                   | U+1B80 to U+1BBF
+  `\p{IsBatak}`                                       | U+1BC0 to U+1BFF
+  `\p{IsLepcha}`                                      | U+1C00 to U+1C4F
+  `\p{IsOlChiki}`                                     | U+1C50 to U+1C7F
+  `\p{IsCyrillicExtended-C}`                          | U+1C80 to U+1C8F
+  `\p{IsGeorgianExtended}`                            | U+1C90 to U+1CBF
+  `\p{IsSundaneseSupplement}`                         | U+1CC0 to U+1CCF
+  `\p{IsVedicExtensions}`                             | U+1CD0 to U+1CFF
+  `\p{IsPhoneticExtensions}`                          | U+1D00 to U+1D7F
+  `\p{IsPhoneticExtensionsSupplement}`                | U+1D80 to U+1DBF
+  `\p{IsCombiningDiacriticalMarksSupplement}`         | U+1DC0 to U+1DFF
+  `\p{IsLatinExtendedAdditional}`                     | U+1E00 to U+1EFF
+  `\p{IsGreekExtended}`                               | U+1F00 to U+1FFF
+  `\p{IsGeneralPunctuation}`                          | U+2000 to U+206F
+  `\p{IsSuperscriptsandSubscripts}`                   | U+2070 to U+209F
+  `\p{IsCurrencySymbols}`                             | U+20A0 to U+20CF
+  `\p{IsCombiningDiacriticalMarksforSymbols}`         | U+20D0 to U+20FF
+  `\p{IsLetterlikeSymbols}`                           | U+2100 to U+214F
+  `\p{IsNumberForms}`                                 | U+2150 to U+218F
+  `\p{IsArrows}`                                      | U+2190 to U+21FF
+  `\p{IsMathematicalOperators}`                       | U+2200 to U+22FF
+  `\p{IsMiscellaneousTechnical}`                      | U+2300 to U+23FF
+  `\p{IsControlPictures}`                             | U+2400 to U+243F
+  `\p{IsOpticalCharacterRecognition}`                 | U+2440 to U+245F
+  `\p{IsEnclosedAlphanumerics}`                       | U+2460 to U+24FF
+  `\p{IsBoxDrawing}`                                  | U+2500 to U+257F
+  `\p{IsBlockElements}`                               | U+2580 to U+259F
+  `\p{IsGeometricShapes}`                             | U+25A0 to U+25FF
+  `\p{IsMiscellaneousSymbols}`                        | U+2600 to U+26FF
+  `\p{IsDingbats}`                                    | U+2700 to U+27BF
+  `\p{IsMiscellaneousMathematicalSymbols-A}`          | U+27C0 to U+27EF
+  `\p{IsSupplementalArrows-A}`                        | U+27F0 to U+27FF
+  `\p{IsBraillePatterns}`                             | U+2800 to U+28FF
+  `\p{IsSupplementalArrows-B}`                        | U+2900 to U+297F
+  `\p{IsMiscellaneousMathematicalSymbols-B}`          | U+2980 to U+29FF
+  `\p{IsSupplementalMathematicalOperators}`           | U+2A00 to U+2AFF
+  `\p{IsMiscellaneousSymbolsandArrows}`               | U+2B00 to U+2BFF
+  `\p{IsGlagolitic}`                                  | U+2C00 to U+2C5F
+  `\p{IsLatinExtended-C}`                             | U+2C60 to U+2C7F
+  `\p{IsCoptic}`                                      | U+2C80 to U+2CFF
+  `\p{IsGeorgianSupplement}`                          | U+2D00 to U+2D2F
+  `\p{IsTifinagh}`                                    | U+2D30 to U+2D7F
+  `\p{IsEthiopicExtended}`                            | U+2D80 to U+2DDF
+  `\p{IsCyrillicExtended-A}`                          | U+2DE0 to U+2DFF
+  `\p{IsSupplementalPunctuation}`                     | U+2E00 to U+2E7F
+  `\p{IsCJKRadicalsSupplement}`                       | U+2E80 to U+2EFF
+  `\p{IsKangxiRadicals}`                              | U+2F00 to U+2FDF
+  `\p{IsIdeographicDescriptionCharacters}`            | U+2FF0 to U+2FFF
+  `\p{IsCJKSymbolsandPunctuation}`                    | U+3000 to U+303F
+  `\p{IsHiragana}`                                    | U+3040 to U+309F
+  `\p{IsKatakana}`                                    | U+30A0 to U+30FF
+  `\p{IsBopomofo}`                                    | U+3100 to U+312F
+  `\p{IsHangulCompatibilityJamo}`                     | U+3130 to U+318F
+  `\p{IsKanbun}`                                      | U+3190 to U+319F
+  `\p{IsBopomofoExtended}`                            | U+31A0 to U+31BF
+  `\p{IsCJKStrokes}`                                  | U+31C0 to U+31EF
+  `\p{IsKatakanaPhoneticExtensions}`                  | U+31F0 to U+31FF
+  `\p{IsEnclosedCJKLettersandMonths}`                 | U+3200 to U+32FF
+  `\p{IsCJKCompatibility}`                            | U+3300 to U+33FF
+  `\p{IsCJKUnifiedIdeographsExtensionA}`              | U+3400 to U+4DBF
+  `\p{IsYijingHexagramSymbols}`                       | U+4DC0 to U+4DFF
+  `\p{IsCJKUnifiedIdeographs}`                        | U+4E00 to U+9FFF
+  `\p{IsYiSyllables}`                                 | U+A000 to U+A48F
+  `\p{IsYiRadicals}`                                  | U+A490 to U+A4CF
+  `\p{IsLisu}`                                        | U+A4D0 to U+A4FF
+  `\p{IsVai}`                                         | U+A500 to U+A63F
+  `\p{IsCyrillicExtended-B}`                          | U+A640 to U+A69F
+  `\p{IsBamum}`                                       | U+A6A0 to U+A6FF
+  `\p{IsModifierToneLetters}`                         | U+A700 to U+A71F
+  `\p{IsLatinExtended-D}`                             | U+A720 to U+A7FF
+  `\p{IsSylotiNagri}`                                 | U+A800 to U+A82F
+  `\p{IsCommonIndicNumberForms}`                      | U+A830 to U+A83F
+  `\p{IsPhags-pa}`                                    | U+A840 to U+A87F
+  `\p{IsSaurashtra}`                                  | U+A880 to U+A8DF
+  `\p{IsDevanagariExtended}`                          | U+A8E0 to U+A8FF
+  `\p{IsKayahLi}`                                     | U+A900 to U+A92F
+  `\p{IsRejang}`                                      | U+A930 to U+A95F
+  `\p{IsHangulJamoExtended-A}`                        | U+A960 to U+A97F
+  `\p{IsJavanese}`                                    | U+A980 to U+A9DF
+  `\p{IsMyanmarExtended-B}`                           | U+A9E0 to U+A9FF
+  `\p{IsCham}`                                        | U+AA00 to U+AA5F
+  `\p{IsMyanmarExtended-A}`                           | U+AA60 to U+AA7F
+  `\p{IsTaiViet}`                                     | U+AA80 to U+AADF
+  `\p{IsMeeteiMayekExtensions}`                       | U+AAE0 to U+AAFF
+  `\p{IsEthiopicExtended-A}`                          | U+AB00 to U+AB2F
+  `\p{IsLatinExtended-E}`                             | U+AB30 to U+AB6F
+  `\p{IsCherokeeSupplement}`                          | U+AB70 to U+ABBF
+  `\p{IsMeeteiMayek}`                                 | U+ABC0 to U+ABFF
+  `\p{IsHangulSyllables}`                             | U+AC00 to U+D7AF
+  `\p{IsHangulJamoExtended-B}`                        | U+D7B0 to U+D7FF
+  `\p{IsHighSurrogates}`                              | U+D800 to U+DB7F
+  `\p{IsHighPrivateUseSurrogates}`                    | U+DB80 to U+DBFF
+  `\p{IsLowSurrogates}`                               | U+DC00 to U+DFFF
+  `\p{IsPrivateUseArea}`                              | U+E000 to U+F8FF
+  `\p{IsCJKCompatibilityIdeographs}`                  | U+F900 to U+FAFF
+  `\p{IsAlphabeticPresentationForms}`                 | U+FB00 to U+FB4F
+  `\p{IsArabicPresentationForms-A}`                   | U+FB50 to U+FDFF
+  `\p{IsVariationSelectors}`                          | U+FE00 to U+FE0F
+  `\p{IsVerticalForms}`                               | U+FE10 to U+FE1F
+  `\p{IsCombiningHalfMarks}`                          | U+FE20 to U+FE2F
+  `\p{IsCJKCompatibilityForms}`                       | U+FE30 to U+FE4F
+  `\p{IsSmallFormVariants}`                           | U+FE50 to U+FE6F
+  `\p{IsArabicPresentationForms-B}`                   | U+FE70 to U+FEFF
+  `\p{IsHalfwidthandFullwidthForms}`                  | U+FF00 to U+FFEF
+  `\p{IsSpecials}`                                    | U+FFF0 to U+FFFF
+  `\p{IsLinearBSyllabary}`                            | U+10000 to U+1007F
+  `\p{IsLinearBIdeograms}`                            | U+10080 to U+100FF
+  `\p{IsAegeanNumbers}`                               | U+10100 to U+1013F
+  `\p{IsAncientGreekNumbers}`                         | U+10140 to U+1018F
+  `\p{IsAncientSymbols}`                              | U+10190 to U+101CF
+  `\p{IsPhaistosDisc}`                                | U+101D0 to U+101FF
+  `\p{IsLycian}`                                      | U+10280 to U+1029F
+  `\p{IsCarian}`                                      | U+102A0 to U+102DF
+  `\p{IsCopticEpactNumbers}`                          | U+102E0 to U+102FF
+  `\p{IsOldItalic}`                                   | U+10300 to U+1032F
+  `\p{IsGothic}`                                      | U+10330 to U+1034F
+  `\p{IsOldPermic}`                                   | U+10350 to U+1037F
+  `\p{IsUgaritic}`                                    | U+10380 to U+1039F
+  `\p{IsOldPersian}`                                  | U+103A0 to U+103DF
+  `\p{IsDeseret}`                                     | U+10400 to U+1044F
+  `\p{IsShavian}`                                     | U+10450 to U+1047F
+  `\p{IsOsmanya}`                                     | U+10480 to U+104AF
+  `\p{IsOsage}`                                       | U+104B0 to U+104FF
+  `\p{IsElbasan}`                                     | U+10500 to U+1052F
+  `\p{IsCaucasianAlbanian}`                           | U+10530 to U+1056F
+  `\p{IsVithkuqi}`                                    | U+10570 to U+105BF
+  `\p{IsLinearA}`                                     | U+10600 to U+1077F
+  `\p{IsLatinExtended-F}`                             | U+10780 to U+107BF
+  `\p{IsCypriotSyllabary}`                            | U+10800 to U+1083F
+  `\p{IsImperialAramaic}`                             | U+10840 to U+1085F
+  `\p{IsPalmyrene}`                                   | U+10860 to U+1087F
+  `\p{IsNabataean}`                                   | U+10880 to U+108AF
+  `\p{IsHatran}`                                      | U+108E0 to U+108FF
+  `\p{IsPhoenician}`                                  | U+10900 to U+1091F
+  `\p{IsLydian}`                                      | U+10920 to U+1093F
+  `\p{IsMeroiticHieroglyphs}`                         | U+10980 to U+1099F
+  `\p{IsMeroiticCursive}`                             | U+109A0 to U+109FF
+  `\p{IsKharoshthi}`                                  | U+10A00 to U+10A5F
+  `\p{IsOldSouthArabian}`                             | U+10A60 to U+10A7F
+  `\p{IsOldNorthArabian}`                             | U+10A80 to U+10A9F
+  `\p{IsManichaean}`                                  | U+10AC0 to U+10AFF
+  `\p{IsAvestan}`                                     | U+10B00 to U+10B3F
+  `\p{IsInscriptionalParthian}`                       | U+10B40 to U+10B5F
+  `\p{IsInscriptionalPahlavi}`                        | U+10B60 to U+10B7F
+  `\p{IsPsalterPahlavi}`                              | U+10B80 to U+10BAF
+  `\p{IsOldTurkic}`                                   | U+10C00 to U+10C4F
+  `\p{IsOldHungarian}`                                | U+10C80 to U+10CFF
+  `\p{IsHanifiRohingya}`                              | U+10D00 to U+10D3F
+  `\p{IsRumiNumeralSymbols}`                          | U+10E60 to U+10E7F
+  `\p{IsYezidi}`                                      | U+10E80 to U+10EBF
+  `\p{IsOldSogdian}`                                  | U+10F00 to U+10F2F
+  `\p{IsSogdian}`                                     | U+10F30 to U+10F6F
+  `\p{IsOldUyghur}`                                   | U+10F70 to U+10FAF
+  `\p{IsChorasmian}`                                  | U+10FB0 to U+10FDF
+  `\p{IsElymaic}`                                     | U+10FE0 to U+10FFF
+  `\p{IsBrahmi}`                                      | U+11000 to U+1107F
+  `\p{IsKaithi}`                                      | U+11080 to U+110CF
+  `\p{IsSoraSompeng}`                                 | U+110D0 to U+110FF
+  `\p{IsChakma}`                                      | U+11100 to U+1114F
+  `\p{IsMahajani}`                                    | U+11150 to U+1117F
+  `\p{IsSharada}`                                     | U+11180 to U+111DF
+  `\p{IsSinhalaArchaicNumbers}`                       | U+111E0 to U+111FF
+  `\p{IsKhojki}`                                      | U+11200 to U+1124F
+  `\p{IsMultani}`                                     | U+11280 to U+112AF
+  `\p{IsKhudawadi}`                                   | U+112B0 to U+112FF
+  `\p{IsGrantha}`                                     | U+11300 to U+1137F
+  `\p{IsNewa}`                                        | U+11400 to U+1147F
+  `\p{IsTirhuta}`                                     | U+11480 to U+114DF
+  `\p{IsSiddham}`                                     | U+11580 to U+115FF
+  `\p{IsModi}`                                        | U+11600 to U+1165F
+  `\p{IsMongolianSupplement}`                         | U+11660 to U+1167F
+  `\p{IsTakri}`                                       | U+11680 to U+116CF
+  `\p{IsAhom}`                                        | U+11700 to U+1174F
+  `\p{IsDogra}`                                       | U+11800 to U+1184F
+  `\p{IsWarangCiti}`                                  | U+118A0 to U+118FF
+  `\p{IsDivesAkuru}`                                  | U+11900 to U+1195F
+  `\p{IsNandinagari}`                                 | U+119A0 to U+119FF
+  `\p{IsZanabazarSquare}`                             | U+11A00 to U+11A4F
+  `\p{IsSoyombo}`                                     | U+11A50 to U+11AAF
+  `\p{IsUnifiedCanadianAboriginalSyllabicsExtended-A}`| U+11AB0 to U+11ABF
+  `\p{IsPauCinHau}`                                   | U+11AC0 to U+11AFF
+  `\p{IsBhaiksuki}`                                   | U+11C00 to U+11C6F
+  `\p{IsMarchen}`                                     | U+11C70 to U+11CBF
+  `\p{IsMasaramGondi}`                                | U+11D00 to U+11D5F
+  `\p{IsGunjalaGondi}`                                | U+11D60 to U+11DAF
+  `\p{IsMakasar}`                                     | U+11EE0 to U+11EFF
+  `\p{IsLisuSupplement}`                              | U+11FB0 to U+11FBF
+  `\p{IsTamilSupplement}`                             | U+11FC0 to U+11FFF
+  `\p{IsCuneiform}`                                   | U+12000 to U+123FF
+  `\p{IsCuneiformNumbersandPunctuation}`              | U+12400 to U+1247F
+  `\p{IsEarlyDynasticCuneiform}`                      | U+12480 to U+1254F
+  `\p{IsCypro-Minoan}`                                | U+12F90 to U+12FFF
+  `\p{IsEgyptianHieroglyphs}`                         | U+13000 to U+1342F
+  `\p{IsEgyptianHieroglyphFormatControls}`            | U+13430 to U+1343F
+  `\p{IsAnatolianHieroglyphs}`                        | U+14400 to U+1467F
+  `\p{IsBamumSupplement}`                             | U+16800 to U+16A3F
+  `\p{IsMro}`                                         | U+16A40 to U+16A6F
+  `\p{IsTangsa}`                                      | U+16A70 to U+16ACF
+  `\p{IsBassaVah}`                                    | U+16AD0 to U+16AFF
+  `\p{IsPahawhHmong}`                                 | U+16B00 to U+16B8F
+  `\p{IsMedefaidrin}`                                 | U+16E40 to U+16E9F
+  `\p{IsMiao}`                                        | U+16F00 to U+16F9F
+  `\p{IsIdeographicSymbolsandPunctuation}`            | U+16FE0 to U+16FFF
+  `\p{IsTangut}`                                      | U+17000 to U+187FF
+  `\p{IsTangutComponents}`                            | U+18800 to U+18AFF
+  `\p{IsKhitanSmallScript}`                           | U+18B00 to U+18CFF
+  `\p{IsTangutSupplement}`                            | U+18D00 to U+18D7F
+  `\p{IsKanaExtended-B}`                              | U+1AFF0 to U+1AFFF
+  `\p{IsKanaSupplement}`                              | U+1B000 to U+1B0FF
+  `\p{IsKanaExtended-A}`                              | U+1B100 to U+1B12F
+  `\p{IsSmallKanaExtension}`                          | U+1B130 to U+1B16F
+  `\p{IsNushu}`                                       | U+1B170 to U+1B2FF
+  `\p{IsDuployan}`                                    | U+1BC00 to U+1BC9F
+  `\p{IsShorthandFormatControls}`                     | U+1BCA0 to U+1BCAF
+  `\p{IsZnamennyMusicalNotation}`                     | U+1CF00 to U+1CFCF
+  `\p{IsByzantineMusicalSymbols}`                     | U+1D000 to U+1D0FF
+  `\p{IsMusicalSymbols}`                              | U+1D100 to U+1D1FF
+  `\p{IsAncientGreekMusicalNotation}`                 | U+1D200 to U+1D24F
+  `\p{IsMayanNumerals}`                               | U+1D2E0 to U+1D2FF
+  `\p{IsTaiXuanJingSymbols}`                          | U+1D300 to U+1D35F
+  `\p{IsCountingRodNumerals}`                         | U+1D360 to U+1D37F
+  `\p{IsMathematicalAlphanumericSymbols}`             | U+1D400 to U+1D7FF
+  `\p{IsSuttonSignWriting}`                           | U+1D800 to U+1DAAF
+  `\p{IsLatinExtended-G}`                             | U+1DF00 to U+1DFFF
+  `\p{IsGlagoliticSupplement}`                        | U+1E000 to U+1E02F
+  `\p{IsNyiakengPuachueHmong}`                        | U+1E100 to U+1E14F
+  `\p{IsToto}`                                        | U+1E290 to U+1E2BF
+  `\p{IsWancho}`                                      | U+1E2C0 to U+1E2FF
+  `\p{IsEthiopicExtended-B}`                          | U+1E7E0 to U+1E7FF
+  `\p{IsMendeKikakui}`                                | U+1E800 to U+1E8DF
+  `\p{IsAdlam}`                                       | U+1E900 to U+1E95F
+  `\p{IsIndicSiyaqNumbers}`                           | U+1EC70 to U+1ECBF
+  `\p{IsOttomanSiyaqNumbers}`                         | U+1ED00 to U+1ED4F
+  `\p{IsArabicMathematicalAlphabeticSymbols}`         | U+1EE00 to U+1EEFF
+  `\p{IsMahjongTiles}`                                | U+1F000 to U+1F02F
+  `\p{IsDominoTiles}`                                 | U+1F030 to U+1F09F
+  `\p{IsPlayingCards}`                                | U+1F0A0 to U+1F0FF
+  `\p{IsEnclosedAlphanumericSupplement}`              | U+1F100 to U+1F1FF
+  `\p{IsEnclosedIdeographicSupplement}`               | U+1F200 to U+1F2FF
+  `\p{IsMiscellaneousSymbolsandPictographs}`          | U+1F300 to U+1F5FF
+  `\p{IsEmoticons}`                                   | U+1F600 to U+1F64F
+  `\p{IsOrnamentalDingbats}`                          | U+1F650 to U+1F67F
+  `\p{IsTransportandMapSymbols}`                      | U+1F680 to U+1F6FF
+  `\p{IsAlchemicalSymbols}`                           | U+1F700 to U+1F77F
+  `\p{IsGeometricShapesExtended}`                     | U+1F780 to U+1F7FF
+  `\p{IsSupplementalArrows-C}`                        | U+1F800 to U+1F8FF
+  `\p{IsSupplementalSymbolsandPictographs}`           | U+1F900 to U+1F9FF
+  `\p{IsChessSymbols}`                                | U+1FA00 to U+1FA6F
+  `\p{IsSymbolsandPictographsExtended-A}`             | U+1FA70 to U+1FAFF
+  `\p{IsSymbolsforLegacyComputing}`                   | U+1FB00 to U+1FBFF
+  `\p{IsCJKUnifiedIdeographsExtensionB}`              | U+20000 to U+2A6DF
+  `\p{IsCJKUnifiedIdeographsExtensionC}`              | U+2A700 to U+2B73F
+  `\p{IsCJKUnifiedIdeographsExtensionD}`              | U+2B740 to U+2B81F
+  `\p{IsCJKUnifiedIdeographsExtensionE}`              | U+2B820 to U+2CEAF
+  `\p{IsCJKUnifiedIdeographsExtensionF}`              | U+2CEB0 to U+2EBEF
+  `\p{IsCJKCompatibilityIdeographsSupplement}`        | U+2F800 to U+2FA1F
+  `\p{IsCJKUnifiedIdeographsExtensionG}`              | U+30000 to U+3134F
+  `\p{IsTags}`                                        | U+E0000 to U+E007F
+  `\p{IsVariationSelectorsSupplement}`                | U+E0100 to U+E01EF
+  `\p{IsSupplementaryPrivateUseArea-A}`               | U+F0000 to U+FFFFF
+  `\p{IsSupplementaryPrivateUseArea-B}`               | U+100000 to U+10FFFF
 
 In addition, the `−−unicode` option enables standard Unicode language scripts:
 
@@ -3121,8 +3189,8 @@ can be used in place of the pattern `\z`.
 Actions for the start of input can be specified in an initial code block
 preceding the rules, see \ref reflex-code-blocks.
 
-Word boundaries demarcate words.  Word characters `\w` are letters, digits, and
-the underscore.
+Word boundaries demarcate words.  Word characters are letters, digits, and the
+underscore.
 
   Pattern   | Matches
   --------- | -----------------------------------------------------------------
@@ -3134,10 +3202,6 @@ the underscore.
   `\>φ`     | matches `φ` that starts as a non-word
   `φ\<`     | matches `φ` that ends as a non-word
   `φ\>`     | matches `φ` that ends as a word
-
-@note The RE/flex regex library requires anchors and word boundaries to be
-specified in patterns at the start or end of the pattern.  Boundaries are not
-permitted in the middle of a pattern, see \ref reflex-limitations.
 
 🔝 [Back to table of contents](#)
 
@@ -3173,13 +3237,13 @@ the left margin, but should exclude `\n`.  For example:
 
 The `\h` pattern matches space and tabs, where tabs advance to the next column
 that is a multiple of 8.  The tab multiplier can be changed by setting the
-`−−tabs=N` option where `N` must be 1, 2, 4, or 8.  The tabs value can be
-changed at runtime with `matcher().tabs(N)`:
+`−−tabs=N` option where `N` must be 1 (no expansion), 2, 4, or 8.  The tabs
+value can be changed at runtime with `matcher().tabs(N)`:
 
   RE/flex action      | Result
   ------------------- | -------------------------------------------------------
   `matcher().tabs()`  | returns the current tabs value 1, 2, 4, or 8
-  `matcher().tabs(n)` | set the tabs value `n` where `n` is 1, 2, 4 or 8
+  `matcher().tabs(n)` | set the tabs value `n` where `n` is 1, 2, 4, or 8
 
 Using negative patterns we can ignore empty lines and multi-line comments that
 would otherwise affect indent stops:
@@ -3486,7 +3550,7 @@ the following patterns to be used:
 
   Pattern            | Matches
   ------------------ | --------------------------------------------------------
-  `.`                | matches any Unicode character (beware of \ref invalid-utf)
+  `.`                | matches any character (or byte in Unicode mode, see \ref invalid-utf)
   `€` (UTF-8)        | matches wide character `€`, encoded in UTF-8
   `[€¥£]` (UTF-8)    | matches wide character `€`, `¥` or `£`, encoded in UTF-8
   `\X`               | matches any ISO-8859-1 or Unicode character
@@ -3885,7 +3949,12 @@ The generated `#define` names (some of which are added to support option
 
 Alternatively to `−−lexer=NAME` and `−−prefix=NAME`, you can use
 `−−namespace=NAME` to place the generated lexer class in a C++ namespace to
-avoid lexer class name clashes.
+avoid lexer class name clashes.  Note that unlike the `−−prefix=NAME` option,
+the generated file names are not renamed by including `NAME` in the filename.
+Generate the files in a separate subdirectory for each C++ namespace specified
+with `−−namespace=NAME`.  Or you can explicitly specify the lex filename with
+`−−outfile=NAME` and also `−−header-file=NAME` and ``−−tables-file=NAME` when
+header files and table files are used.
 
 🔝 [Back to table of contents](#)
 
@@ -3983,8 +4052,8 @@ demand, and modifies this buffered content, e.g. to allow `text()` to return a
 
 ~~~{.cpp}
     // read a 0-terminated buffer in place, buffer content is changed!!
-    char *base = ...;  // points to 0-terminated buffer
-    size_t size = ...; // length of the buffer including final \0 byte
+    char *base = ...;  // points to the base address of the data
+    size_t size = ...; // length of the data including one extra byte for a final \0
     lexer.buffer(base, size);
     lexer.lex();
 ~~~
@@ -4751,9 +4820,8 @@ rules are matched.  For example:
 Interfacing with Bison/Yacc                                     {#reflex-bison}
 ---------------------------
 
-The [Bison](dinosaur.compilertools.net/#bison) tools generate parsers that
-invoke the global C function `yylex()` to get the next token.  Tokens are
-integer values returned by `yylex()`.
+The Bison tools generate parsers that invoke the global C function `yylex()` to
+get the next token.  Tokens are integer values returned by `yylex()`.
 
 To support Bison parsers use <b>`reflex`</b> option `−−bison`.  This option
 generates a scanner with a global lexer object `YY_SCANNER` and a global
@@ -5804,9 +5872,9 @@ To use a matcher for the generated scanner, use one of these three choices:
   Option          | Matcher class used  | Mode  | Engine      
   --------------- | ------------------- | ----- | ----------------------------- 
   `-m reflex`     | `Matcher`           | POSIX | RE/flex lib (default choice)
+  `-m pcre2-perl` | `PCRE2Matcher`      | Perl  | PCRE2
   `-m boost`      | `BoostPosixMatcher` | POSIX | Boost.Regex 
   `-m boost-perl` | `BoostPerlMatcher`  | Perl  | Boost.Regex 
-  `-m pcre2-perl` | `PCRE2Matcher`      | Perl  | PCRE2
 
 The POSIX matchers look for the *longest possible match* among the given set of
 alternative patterns.  Perl matchers look for the *first match* among the given
@@ -6389,14 +6457,18 @@ to FSM matching that apply to Flex/Lex and therefore also apply to the
 - Lookaheads cannot be properly matched when the ending of the first part of
   the pattern matches the beginning of the second part, such as `zx*/xy*`,
   where the `x*` matches the `x` at the beginning of the lookahead pattern.
-- Anchors and boundaries must appear at the start or at the end of a pattern.
-  The begin of buffer/line anchors `\A` and `^`, end of buffer/line anchors
-  `\z` and `$` and the word boundary anchors must start or end a pattern.  For
-  example, `\<cow\>` is permitted, but `.*\Bboy` is not.
+  This is a common limitation that also Lex and Flex (with some ad-hoc
+  exceptions) have.
 - The POSIX Lex `REJECT` action is not supported.
 - The POSIX Lex table size parameters `%p`, `%n`, `%a`, `%e`, `%k`, and `%o`
-  are not supported; `%o` may be used as a shorthand for `%option`.
+  are not supported; `%o` may also be used as a shorthand for `%option`.
 - Flex translations <i>`%%T`</i> are not supported.
+- Word boundaries `\<`, `\>`, `\b` and `\B` are supported by RE/flex using
+  backtracking (since RE/flex version 3.4.1).  Except that option `−−fast` does
+  not produce code that backtracks, which means that patterns such as
+  `bar.*\bfoo` that require backtracking on `\b` may not work properly.  If
+  necessary, use option `−−full` when word boundaries are used when these
+  require backtracking to find a match.
 
 Some of these limitations may be removed in future versions of RE/flex.
 
@@ -6443,7 +6515,7 @@ The RE/flex regex library is a class hierarchy that has at the root an abstract
 class `reflex::AbstractMatcher`.  Pattern types may differ between for matchers
 so the `reflex::PatternMatcher` template class takes a pattern type and creates
 a class that is complete except for the implementation of the `reflex::match()`
-virtual method that requires a regex engine, such as Boost.Regex, PCRE2, or the
+virtual method that requires a regex engine, such as PCRE2, Boost.Regex, or the
 RE/flex engine.
 
 To compile your application, simply include the applicable regex matcher of
@@ -6452,17 +6524,106 @@ compile, link your application against the `libreflex` library:
 
     c++ myapp.cpp -lreflex
 
-And optionally `-lboost_regex` depending on your Boost installation) if you use
-Boost.Regex for matching:
-
-    c++ myapp.cpp -lreflex -lboost_regex
-
-or `-lpcre2-8` if you use PCRE2 for matching:
+And optionally `-lpcre2-8` if you want to use PCRE2 for searching and matching:
 
     c++ myapp.cpp -lreflex -lpcre2-8
 
+or `-lboost_regex` if you want to use Boost.Regex for searching and matching:
+
+    c++ myapp.cpp -lreflex -lboost_regex
+
 If `libreflex` was not installed then linking with `-lreflex` fails.  See
 \ref link-errors on how to resolve this.
+
+🔝 [Back to table of contents](#)
+
+
+PCRE2 matcher classes                                            {#regex-pcre2}
+---------------------
+
+The `reflex::PCRE2Matcher` inherits `reflex::PatternMatcher<std::string>`.
+The `reflex::PCRE2UTFMatcher` is derived from `reflex::PCRE2Matcher`:
+
+  ![](classreflex_1_1_p_c_r_e2_matcher__inherit__graph.png)
+
+An instance of `reflex::PCRE2Matcher` is initialized with a pattern that is
+compiled with `pcre2_compile()` and `pcre2_jit_compile()` for optimal
+performance with PCRE2 JIT-generated code.
+
+An instance of `reflex::PCRE2UTFMatcher` creates a PCRE2 matcher with native
+Unicode support, using PCRE2 options `PCRE2_UTF+PCRE2_UCP`.
+
+PCRE2 is a powerful library.  The RE/flex regex API enhances this library with
+operations to match, search, scan, and split data from a given input.  The
+input may be a file, a string, or a stream.  Files that are UTF-8/16/32-encoded
+are automatically decoded.  Further, streams can be of potentially unlimited
+length because internal buffering is used by the RE/flex regex API enhancements
+to efficiently apply PCRE2 partial pattern matching to streaming data.  This
+enhancement permits pattern matching of interactive input from the console,
+such that searching and scanning interactive input for matches will return
+these matches immediately.
+
+A `reflex::PCRE2Matcher` (or `reflex::PCRE2UTFMatcher`) engine is created from
+a string regex and some given input:
+
+~~~{.cpp}
+    #include <reflex/pcre2matcher.h>
+
+    reflex::PCRE2Matcher matcher( string, reflex::Input [, "options"] )
+~~~
+
+Likewise, a `reflex::PCRE2UTFMatcher` engine is created from a string regex and
+some given input:
+
+~~~{.cpp}
+    #include <reflex/pcre2matcher.h>
+
+    reflex::PCRE2UTFMatcher matcher( string, reflex::Input [, "options"] )
+~~~
+
+This matcher uses PCRE2 native Unicode matching.  Non-UTF input is not
+supported, such as plain binary.  UTF encoding errors in the input will cause
+the matcher to terminate.
+
+For input you can specify a string, a wide string, a file, or a stream object.
+
+We use option `"N"` to permit empty matches when searching input with
+`reflex::PCRE2Matcher::find`.
+
+You can convert an expressive regex of the form defined in \ref reflex-patterns
+to a regex that the PCRE2 engine can handle:
+
+~~~{.cpp}
+    #include <reflex/pcre2matcher.h>
+
+    static const std::string regex = reflex::PCRE2Matcher::convert( string, [ flags ]);
+
+    reflex::PCRE2Matcher matcher( regex, reflex::Input [, "options"] )
+~~~
+
+The converter is specific to the matcher selected, i.e.
+`reflex::PCRE2Matcher::convert` and `reflex::PCRE2UTFMatcher::convert`.
+The former converter converts Unicode `\p` character classes to UTF-8 patterns,
+converts bracket character classes containing Unicode, and groups UTF-8
+multi-byte sequences in the regex string.  The latter converter does not
+convert these regex constructs, which are matched by the PCRE2 engine
+initialized with options `PCRE2_UTF+PCRE2_UCP`.
+
+The converter throws a `reflex::regex_error` exception if conversion fails,
+for example when the regex syntax is invalid.
+
+To compile your application, link your application against the `libreflex`
+library and `-lpcre2-8`:
+
+    c++ myapp.cpp -lreflex -lpcre2-8
+
+See \ref reflex-patterns for more details on regex patterns.
+
+See \ref regex-input for more details on the `reflex::Input` class.
+
+See \ref regex-methods for more details on pattern matching methods.
+
+See \ref regex-convert for more details on regex converters.
 
 🔝 [Back to table of contents](#)
 
@@ -6570,96 +6731,6 @@ See \ref regex-convert for more details on regex converters.
 🔝 [Back to table of contents](#)
 
 
-PCRE2 matcher classes                                            {#regex-pcre2}
----------------------
-
-The `reflex::PCRE2Matcher` inherits `reflex::PatternMatcher<std::string>`.
-The `reflex::PCRE2UTFMatcher` is derived from `reflex::PCRE2Matcher`:
-
-  ![](classreflex_1_1_p_c_r_e2_matcher__inherit__graph.png)
-
-An instance of `reflex::PCRE2Matcher` is initialized with a pattern that is
-compiled with `pcre2_compile()` and `pcre2_jit_compile()` for optimal
-performance with PCRE2 JIT-generated code.
-
-An instance of `reflex::PCRE2UTFMatcher` creates a PCRE2 matcher with native
-Unicode support, using PCRE2 options `PCRE2_UTF+PCRE2_UCP`.
-
-PCRE2 is a powerful library.  The RE/flex regex API enhances this library with
-operations to match, search, scan, and split data from a given input.  The
-input may be a file, a string, or a stream.  Files that are UTF-8/16/32-encoded
-are automatically decoded.  Further, streams can be of potentially unlimited
-length because internal buffering is used by the RE/flex regex API enhancements
-to efficiently apply PCRE2 partial pattern matching to streaming data.  This
-enhancement permits pattern matching of interactive input from the console,
-such that searching and scanning interactive input for matches will return
-these matches immediately.
-
-A `reflex::PCRE2Matcher` (or `reflex::PCRE2UTFMatcher`) engine is created from
-a string regex and some given input:
-
-~~~{.cpp}
-    #include <reflex/pcre2matcher.h>
-
-    reflex::PCRE2Matcher matcher( string, reflex::Input [, "options"] )
-~~~
-
-Likewise, a `reflex::PCRE2UTFMatcher` engine is created from a string regex and
-some given input:
-
-~~~{.cpp}
-    #include <reflex/pcre2matcher.h>
-
-    reflex::PCRE2UTFMatcher matcher( string, reflex::Input [, "options"] )
-~~~
-
-This matcher uses PCRE2 native Unicode matching.  Non-UTF input is not
-supported, such as plain binary.  UTF encoding errors in the input will cause
-the matcher to terminate.
-
-For input you can specify a string, a wide string, a file, or a stream object.
-
-We use option `"N"` to permit empty matches when searching input with
-`reflex::PCRE2Matcher::find`.
-
-You can convert an expressive regex of the form defined in \ref reflex-patterns
-to a regex that the PCRE2 engine can handle:
-
-~~~{.cpp}
-    #include <reflex/pcre2matcher.h>
-
-    static const std::string regex = reflex::PCRE2Matcher::convert( string, [ flags ]);
-
-    reflex::PCRE2Matcher matcher( regex, reflex::Input [, "options"] )
-~~~
-
-The converter is specific to the matcher selected, i.e.
-`reflex::PCRE2Matcher::convert` and `reflex::PCRE2UTFMatcher::convert`.
-The former converter converts Unicode `\p` character classes to UTF-8 patterns,
-converts bracket character classes containing Unicode, and groups UTF-8
-multi-byte sequences in the regex string.  The latter converter does not
-convert these regex constructs, which are matched by the PCRE2 engine
-initialized with options `PCRE2_UTF+PCRE2_UCP`.
-
-The converter throws a `reflex::regex_error` exception if conversion fails,
-for example when the regex syntax is invalid.
-
-To compile your application, link your application against the `libreflex`
-library and `-lpcre2-8`:
-
-    c++ myapp.cpp -lreflex -lpcre2-8
-
-See \ref reflex-patterns for more details on regex patterns.
-
-See \ref regex-input for more details on the `reflex::Input` class.
-
-See \ref regex-methods for more details on pattern matching methods.
-
-See \ref regex-convert for more details on regex converters.
-
-🔝 [Back to table of contents](#)
-
-
 std::regex matcher classes                                         {#regex-std}
 --------------------------
 
@@ -6685,7 +6756,7 @@ is buffered with the C++11 std::regex class matchers.
 With respect to performance, as of this time of writing, std::regex matching is
 much slower than other matchers, slower by a factor 10 or more.
 
-The std::regex syntax is more limited than Boost.Regex, PCRE2, and RE/flex.
+The std::regex syntax is more limited than PCRE2, Boost.Regex, and RE/flex.
 Also the matching behavior differs and cannot be controlled with mode
 modifiers:
 
@@ -6751,7 +6822,9 @@ where the RE/flex `reflex::Pattern` class represents a regex pattern.  Patterns
 as regex texts are internally compiled into deterministic finite state machines
 by the `reflex::Pattern` class.  The machines are used by the `reflex::Matcher`
 for fast matching of regex patterns on some given input.  The `reflex::Matcher`
-is faster than the Boost.Regex and PCRE2 matchers.
+is faster than the PCRE2 and Boost.Regex matchers.  The `reflex::FuzzyMatcher`
+subclass is included and performs approximate pattern matching, see the
+[FuzzyMatcher readme](https://github.com/Genivia/FuzzyMatcher).
 
 A `reflex::Matcher` engine is constructed from a `reflex::Pattern` object, or a
 string regex, and some given input:
@@ -6767,7 +6840,9 @@ The regex is specified as a string or a `reflex::Pattern` object, see
 
 We use option `"N"` to permit empty matches when searching input with
 `reflex::Matcher::find`.  Option `"T=8"` sets the tab size to 8 for
-\ref reflex-pattern-dents matching.
+\ref reflex-pattern-dents matching.  Option `"W"` makes patterns match as
+words, i.e. a non-word Unicode character precedes and follows the pattern (only
+applies to `reflex::Matcher` and `reflex::FuzzyMatcher`.)
 
 For input you can specify a string, a wide string, a file, or a stream object.
 
@@ -6883,9 +6958,9 @@ By default, the `reflex::Pattern` constructor solely throws the
 `reflex::regex_error::exceeds_length` and `reflex::regex_error::exceeds_limits`
 exceptions and silently ignores syntax errors.
 
-Likewise, the `reflex::Matcher::convert`, `reflex::BoostPerlMatcher::convert`,
-`reflex::BoostMatcher::convert`, `reflex::BoostPosixMatcher::convert`,
-`reflex::PCRE2Matcher::convert`, and `reflex::PCRE2UTFMatcher::convert`
+Likewise, the `reflex::Matcher::convert`, `reflex::PCRE2Matcher::convert`,
+`reflex::PCRE2UTFMatcher::convert`, `reflex::BoostPerlMatcher::convert`,
+`reflex::BoostMatcher::convert`, and `reflex::BoostPosixMatcher::convert`
 functions may throw a `reflex_error` exception.  See the next section for
 details.
 
@@ -6952,24 +7027,24 @@ underlying regex library understands and can use.
 Each converter is specific to the regex engine.  You can use a converter for
 the matcher of your choice:
 
+- `std::string reflex::Matcher::convert(const std::string& regex, reflex::convert_flag_type flags)`
+  converts an enhanced `regex` for use with the RE/flex POSIX regex library;
+- `std::string reflex::PCRE2Matcher::convert(const std::string& regex, reflex::convert_flag_type flags)`
+  converts an enhanced `regex` for use with PCRE2;
+- `std::string reflex::PCRE2UTFMatcher::convert(const std::string& regex, reflex::convert_flag_type flags)`
+  converts an enhanced `regex` for use with PCRE2 native Unicode matching;
 - `std::string reflex::BoostMatcher::convert(const std::string& regex, reflex::convert_flag_type flags)`
   converts an enhanced `regex` for use with Boost.Regex;
 - `std::string reflex::BoostPerlMatcher::convert(const std::string& regex, reflex::convert_flag_type flags)`
   converts an enhanced `regex` for use with Boost.Regex in Perl mode;
 - `std::string reflex::BoostPosixMatcher::convert(const std::string& regex, reflex::convert_flag_type flags)`
   converts an enhanced `regex` for use with Boost.Regex in POSIX mode;
-- `std::string reflex::PCRE2Matcher::convert(const std::string& regex, reflex::convert_flag_type flags)`
-  converts an enhanced `regex` for use with PCRE2;
-- `std::string reflex::PCRE2UTFMatcher::convert(const std::string& regex, reflex::convert_flag_type flags)`
-  converts an enhanced `regex` for use with PCRE2 native Unicode matching;
 - `std::string reflex::StdMatcher::convert(const std::string& regex, reflex::convert_flag_type flags)`
   converts an enhanced `regex` for use with C++ std::regex;
 - `std::string reflex::StdEcmaMatcher::convert(const std::string& regex, reflex::convert_flag_type flags)`
   converts an enhanced `regex` for use with C++ std::regex in ECMA mode;
 - `std::string reflex::StdPosixMatcher::convert(const std::string& regex, reflex::convert_flag_type flags)`
   converts an enhanced `regex` for use with C++ std::regex in POSIX mode;
-- `std::string reflex::Matcher::convert(const std::string& regex, reflex::convert_flag_type flags)`
-  converts an enhanced `regex` for use with the RE/flex POSIX regex library;
 
 where `flags` is optional.  When specified, it may be a combination of the
 following `reflex::convert_flag` flags:
@@ -6982,8 +7057,9 @@ following `reflex::convert_flag` flags:
   `reflex::convert_flag::recap`      | remove capturing groups and add capturing groups to the top level
   `reflex::convert_flag::lex`        | convert Flex/Lex regular expression syntax
   `reflex::convert_flag::u4`         | convert `\uXXXX` (shorthand for `\u{XXXX}`), may conflict with `\u` (upper case letter).
-  `reflex::convert_flag::notnewline` | inverted character classes do not match newline `\n`, e.g. `[^a-z]` does not match `\n`
+  `reflex::convert_flag::notnewline` | character classes do not match newline `\n`, e.g. `[^a-z]` does not match `\n`
   `reflex::convert_flag::permissive` | when used with `unicode`, produces a more compact FSM that tolerates some invalid UTF-8 sequences
+  `reflex::convert_flag::closing`    | match a `)` literally without the presence of an opening `(`
 
 The following `reflex::convert_flag` flags correspond to the common `(?imsx)`
 modifiers.  These flags or modifiers may be specified, or both.  Modifiers are
@@ -7142,12 +7218,13 @@ The `find()` method returns a nonzero "accept" value (the `size_t accept()`
 group capture index value or the value 1 if no groups are used) for a match
 and zero otherwise.
 
-For example, to find all words in a string with PCRE2:
+For example, to find all words in a string with PCRE2 on UTF-8 input using
+`reflex::PCRE2UTFMatcher`:
 
 ~~~{.cpp}
-    #include <reflex/pcre2matcher.h> // reflex::PCRE2Matcher, reflex::Input
+    #include <reflex/pcre2matcher.h> // reflex::PCRE2UTFMatcher, reflex::Input
 
-    reflex::PCRE2Matcher matcher("\\w+", "How now brown cow.");
+    reflex::PCRE2UTFMatcher matcher("\\w+", "How now brown cow.");
     while (matcher.find() != 0)
       std::cout << matcher.text() << std::endl;
 ~~~
@@ -7165,13 +7242,21 @@ For example, in C++11 we can use a range-based loop to loop over matches using
 the `find` iterator:
 
 ~~~{.cpp}
-    #include <reflex/pcre2matcher.h> // reflex::PCRE2Matcher, reflex::Input
+    #include <reflex/pcre2matcher.h> // reflex::PCRE2UTFMatcher, reflex::Input
 
-    for (auto& match : reflex::PCRE2Matcher("\\w+", "How now brown cow.").find)
+    for (auto& match : reflex::PCRE2UTFMatcher("\\w+", "How now brown cow.").find)
       std::cout << match.text() << std::endl;
 ~~~
 
-Iterators can be used with STL algorithms and other iterator functions.  For
+@note: we cannot generally simplify this loop to the following, because the
+temporary matcher object is destroyed (some compilers handle this in C++23):
+
+~~~{.cpp}
+    for (auto& match : reflex::PCRE2UTFMatcher matcher("\\w+", "How now brown cow.").find);
+      std::cout << "Found " << match.text() << std::endl;
+~~~
+
+Iterators can be used with algorithms and other iterator functions.  For
 example to count words in a string:
 
 ~~~{.cpp}
@@ -7317,6 +7402,7 @@ To obtain properties of a match, use the following methods:
   --------------- | ---------------------------------------------------------------
   `accept()`      | returns group capture index (or zero if not captured/matched)
   `text()`        | returns `const char*` to 0-terminated text match (ends in `\0`)
+  `strview()`     | returns `std::string_view` text match (preserves `\0`s) (C++17)
   `str()`         | returns `std::string` text match (preserves `\0`s)
   `wstr()`        | returns `std::wstring` wide text match (converted from UTF-8)
   `chr()`         | returns first 8-bit char of the text match (`str()[0]` as int)
@@ -7339,6 +7425,7 @@ To obtain properties of a match, use the following methods:
   `columno()`     | returns column number of the match, starting at 0
   `lineno_end()`  | returns ending line number of the match, starting at line 1
   `columno_end()` | returns ending column number of the match, starting at 0
+  `bol()`         | returns `const char*` to non-0-terminated begin of matching line
   `border()`      | returns byte offset from the start of the line of the match
   `first()`       | returns input position of the first character of the match
   `last()`        | returns input position + 1 of the last character of the match
@@ -7353,12 +7440,12 @@ group capture index.  The RE/flex matcher engine `reflex::Matcher` only
 recognizes group captures at the top level of the regex (i.e. among the
 top-level alternations), because it uses an efficient FSM for matching.
 
-The `text()`, `str()`, and `wstr()` methods return the matched text.  To get
-the first character of a match, use `chr()` or `wchr()`.  The `chr()` and
-`wchr()` methods are much more efficient than `str()[0]` (or `text()[0]`) and
-`wstr()[0]`, respectively.  Normally, a match cannot be empty unless option
-`"N"` is specified to explicitly initialize a matcher, see \ref regex-boost,
-\ref regex-pcre2, and \ref regex-matcher.
+The `text()`, `strview()`, `str()`, and `wstr()` methods return the matched
+text.  To get the first character of a match, use `chr()` or `wchr()`.  The
+`chr()` and `wchr()` methods are much more efficient than `str()[0]` (or
+`text()[0]`) and `wstr()[0]`, respectively.  Normally, a match cannot be empty
+unless option `"N"` is specified to explicitly initialize a matcher, see
+\ref regex-matcher, \ref regex-pcre2, and \ref regex-boost.
 
 The `begin()`, `operator[0]`, and `operator[n]` return non-0-terminated
 strings.  You must use `end()` with `begin()` to determine the span of the
@@ -7405,9 +7492,9 @@ with the matched text as a substring.  These methods can be used to obtain the
 context of a match.
 
 @warning The methods `span()`, `line()`, and `wline()` invalidate the previous
-`text()`, `begin()`, and `end()` string pointers.  Call these methods again to
-retrieve the updated pointer or call `str()` or `wstr()` to obtain a string
-copy of the match:
+`text()`, `strview()`, `begin()`, `bol()`, and `end()` string pointers.  Call
+these methods again to retrieve the updated pointer or call `str()` or `wstr()`
+to obtain a string copy of the match:
 ~~~{.cpp}
     // INCORRECT, because t is invalid after line():
     const char *t = text();
@@ -7422,12 +7509,11 @@ copy of the match:
     const char *s = span();
     std::cout << t << " in " << s << std::endl;
 ~~~
-The start of a line is truncated when the line is too long.  The length of the
-line's contents before the pattern match on the line is restricted to 8KB,
-which is the size specified by `reflex::AbstractMatcher::Const::BLOCK`.  When
-this length is exceeded, the line's length before the match is truncated to
-8KB.  This ensures that pattern matching binary files or files with very long
-lines cannot cause memory allocation exceptions.
+The start of a line is truncated when the line is too long, longer than 256K
+which is the initial buffer size `reflex::AbstractMatcher::Const::BUFSZ`.  When
+this length is exceeded, the line's length before the match is truncated.  This
+ensures that pattern matching binary files or files with very long lines cannot
+cause memory allocation exceptions.
 
 The `matcher().more()` method is used to create longer matches by stringing
 together consecutive matches in the input after scanning the input with the
@@ -7688,9 +7774,9 @@ File content specified with a `FILE*` file descriptor can be encoded in ASCII,
 binary, UTF-8/16/32, ISO-8859-1 through ISO-8859-15, CP 1250 through 1258, CP
 437, CP 850, CP 858, or EBCDIC.
 
-A [UTF Byte Order Mark (BOM)](www.unicode.org/faq/utf_bom.html) is detected in
-the content of a file scanned by the matcher, which enables UTF-8 normalization
-of the input automatically.
+A [UTF Byte Order Mark (BOM)](https://www.unicode.org/faq/utf_bom.html) is
+detected in the content of a file scanned by the matcher, which enables UTF-8
+normalization of the input automatically.
 
 Otherwise, if no file encoding is explicitly specified, the matcher expects
 raw UTF-8, ASCII, or plain binary by default.  File formats can be decoded and
@@ -7741,29 +7827,35 @@ The current file encoding used by a matcher is obtained with the
   `reflex::Input::file_encoding::koi8_r`     | KOI8-R
   `reflex::Input::file_encoding::koi8_u`     | KOI8-U
   `reflex::Input::file_encoding::koi8_ru`    | KOI8-RU
+  `reflex::Input::file_encoding::null_data`  | convert between NUL <-> LF
   `reflex::Input::file_encoding::custom`     | user-defined custom code page
 
-To set the file encoding when assigning a file to read with `reflex::Input`,
-use `reflex::Input(file, enc)` with one of the encoding constants shown in
-the table.
+The `null_data` encoding type converts between NUL (zere byte) and LF (`\n`)
+to support input from tools that output NUL for newlines, such as `xargs -0`.
 
-For example, use `reflex::Input::file_encoding::latin` to override the encoding
-when the file contains ISO-8859-1.  This way you can match its content using
-Unicode patterns (matcher engines internally normalizes ISO-8859-1 to UTF-8):
+To specify a file encoding when assigning a file to be read, use
+`reflex::Input(file, enc)` with `enc` one of the encoding constants shown in
+the table above.
+
+For example, `reflex::Input::file_encoding::latin` supports files with
+ISO-8859-1 content.  This way you can match its content using Unicode patterns,
+since the RE/flex matcher engines internally normalize the specified encodings
+to UTF-8 for pattern matching:
 
 ~~~{.cpp}
     reflex::Input input(stdin, reflex::Input::file_encoding::latin);
     reflex::Matcher matcher(pattern, input);
 ~~~
 
-This sets the standard input encoding to ISO-8859-1, but only if no UTF BOM was
-detected on the standard input, because the UTF encoding of a `FILE*` that
-starts with a UTF BOM cannot be overruled.
+This sets the input encoding to ISO-8859-1, but only if no UTF BOM was detected
+on the standard input we are reading from.  The encoding of an input file
+specified as a `FILE*` argument when the file has a UTF BOM cannot be changed.
+The input of UTF-encoded files is normalized to UTF-8 when read.
 
-To define a custom code page to translate files, define a code page table with
-256 entries that maps each 8-bit input character to a 16-bit Unicode character
-(UCS-2).  Then use `reflex::Input::file_encoding::custom` with a pointer to
-your code page to construct an input object.  For example:
+To define a custom code page to normalize the input to Unicode, define a code
+page table with 256 entries that maps each 8-bit input character to a 16-bit
+Unicode character (UCS-2).  Then use `reflex::Input::file_encoding::custom`
+with a pointer to your code page to construct an input object.  For example:
 
 ~~~{.cpp}
     static const unsigned short CP[256] = {
@@ -7895,12 +7987,12 @@ for a RE/flex scanner, for example:
     }
 ~~~
 
-or for a regex matcher that uses Boost.Regex or PCRE2:
+or for a regex matcher that uses PCRE2 or Boost.Regex:
 
 ~~~{.cpp}
     if (is.good())
     {
-      reflex::BoostMatcher matcher("\\w+", is); // read normalized input (DOS CRLF -> LF)
+      reflex::PCRE2Matcher matcher("\\w+", is); // read normalized input (DOS CRLF -> LF)
       while (matcher.find() != 0)
         std::cout << "Found " << matcher.text() << std::endl;
     }
@@ -8219,8 +8311,9 @@ By contrast, the PCRE2 matcher can capture groups within a regex:
         << std::endl;
 ~~~
 
-The Boost.Regex library also supports group captures.  It als supports partial
-matches, but that feature appears to be broken, so all input must be buffered:
+The PCRE2 and Boost.Regex libraries also support group captures and partial
+matches, but that feature appears to be broken with Boost.Regex, so all input
+must be buffered when Boost.Regex is used:
 
 ~~~{.cpp}
     #include <reflex/boostmatcher.h>
@@ -8552,8 +8645,8 @@ to generate global `yy` variables and functions stored in the global
 🔝 [Back to table of contents](#)
 
 
-Invalid UTF encodings                                            {#invalid-utf}
----------------------
+Invalid UTF encodings and the dot pattern                        {#invalid-utf}
+-----------------------------------------
 
 It may be tempting to write a pattern with `.` (dot) as a wildcard in a lexer
 specification, but beware that in Unicode mode enabled with
@@ -8571,18 +8664,23 @@ errors in the input:
 ~~~
 </div>
 
-If dot in Unicode mode would be restricted to match valid Unicode only, then
-the action above will never be triggered when invalid input is encountered.
-Because all non-dot regex patterns are valid Unicode in RE/flex, it would be
-impossible to write a "catch all else" rule that catches input format errors!
+If dot in Unicode mode with <i>`%%option unicode`</i> would be restricted to
+match valid Unicode only, then the action above will never be triggered when
+invalid input is encountered.  Because all non-dot regex patterns are valid
+Unicode in RE/flex, it would be impossible to write a "catch all else" rule
+that catches input format errors!
 
-The dot in Unicode mode is self-synchronizing and consumes text up to to the
-next ASCII or Unicode character.
+The dot in Unicode mode is self-synchronizing and consumes text up to the next
+ASCII or Unicode character.
 
-To accept valid Unicode input in regex patterns, make sure to avoid `.` (dot)
-and use `\p{Unicode}` or `\X` instead, and reserve dot to catch anything,
-such as invalid UTF encodings.  We use `.|\n` or <i>`%%option dotall`</i> to
-catch anything including `\n` and invalid UTF-8/16/32 encodings.
+Because the `.` is "permissive" by design with <i>`%%option unicode`</i>,
+multiple `.` dots in sequence can match a single multi-byte Unicode character
+by its individual bytes.
+
+To accept only valid Unicode input in regex patterns, make sure to avoid `.`
+(dot) and use `\p{Unicode}` or `\X` instead, and reserve dot to catch anything,
+such as invalid UTF encodings.  We can use `.|\n` or <i>`%%option dotall`</i>
+to catch anything including `\n` and invalid UTF-8/16/32 encodings.
 
 Furthermore, before matching any input, invalid UTF-16 input is detected
 automatically by the `reflex::Input` class and replaced with the
@@ -8615,7 +8713,7 @@ is exceeded.
 
 In our lexer specification of a scanner, we may define a "catch all else" rule
 with pattern `.` to report an unmatched "mystery character" that is not
-recognized, for example:
+recognized.  For example:
 
 <div class="alt">
 ~~~{.cpp}
@@ -8641,6 +8739,9 @@ recognized, for example:
     %%
 ~~~
 </div>
+
+Beware that a `.` (dot) matches any character or byte, including invalid
+Unicode.  See also \ref invalid-utf.
 
 The error message indicates the offending line number with `lineno()` and
 prints the problematic line of input using `matcher().line()`.  The position on
@@ -8921,7 +9022,7 @@ example:
 ~~~{.cpp}
     std::setlocale(LC_ALL, "en_US.UTF-8");        // setlocale UTF-8
     std::ifstream ifs("file.txt", std::ios::in);  // open UTF-8/16/32 text file
-    reflex::BoostMatcher matcher("\\w+", ifs);    // not affected by setlocale
+    reflex::PCRE2Matcher matcher("\\w+", ifs);    // not affected by setlocale
     while (matcher.find() != 0)
     {
       std::wstring& match = matcher.wstr();       // not affected by setlocale
@@ -8937,7 +9038,7 @@ not on all systems (I'm looking at you, Mac OS X terminal!)  Instead of
 ~~~{.cpp}
     std::setlocale(LC_ALL, "en_US.UTF-8");       // setlocale UTF-8
     std::ifstream ifs("file.txt", std::ios::in); // open UTF-8/16/32 text file
-    reflex::BoostMatcher matcher("\\w+", ifs);   // not affected by setlocale
+    reflex::PCRE2Matcher matcher("\\w+", ifs);   // not affected by setlocale
     while (matcher.find() != 0)
     {
       std::string& match = matcher.str();        // not affected by setlocale
@@ -8967,8 +9068,8 @@ encodings), set the default file encoding to `latin`:
 ~~~
 
 This scans files from standard input that are encoded in ISO-8859-1, unless the
-file has a [UTF Byte Order Mark (BOM)](www.unicode.org/faq/utf_bom.html).  When
-a BOM is detected the scanner switches to UTF scanning.
+file has a [UTF Byte Order Mark (BOM)](https://www.unicode.org/faq/utf_bom.html).
+When a BOM is detected the scanner switches to UTF scanning.
 
 See \ref regex-input-file to set file encodings.
 
@@ -9354,13 +9455,13 @@ RE/flex applications:
   <i>`reflex/unicode`</i> directories of the RE/flex download package.  The
   header files are located in the <i>`reflex/include/reflex`</i> directory.
 
-- When Boost.Regex is used as a matcher engine, also link `libboost_regex`:
-
-      c++ ... -lreflex -lboost_regex
-
 - When PCRE2 is used as a matcher engine, also link `libpcre2-8`:
 
       c++ ... -lreflex -lpcre2-8
+
+- When Boost.Regex is used as a matcher engine, also link `libboost_regex`:
+
+      c++ ... -lreflex -lboost_regex
 
 - If you get compilation errors with the `std::regex` matching engine, you
   should compile the source code as C++11:
@@ -9376,11 +9477,11 @@ RE/flex applications:
 🔝 [Back to table of contents](#)
 
 
-Minimized library and cross compiling                                {#linking}
--------------------------------------
+Minimized library and (cross) compiling from source                  {#linking}
+---------------------------------------------------
 
-RE/flex scanners generated by <b>`reflex`</b> can be linked against a minimized
-version of the RE/flex library `libreflexmin`:
+RE/flex scanners generated with <b>`reflex`</b> can be linked against a
+minimized version of the RE/flex library `libreflexmin`:
 
     c++ ... -lreflexmin
 
@@ -9390,14 +9491,41 @@ time are excluded from the minimized library.
 If the RE/flex library is not installed, for example when cross-compiling
 a RE/flex scanner to a different platform, then compile directly from the
 RE/flex C++ source files located in the `reflex/lib` and `reflex/include`
-directories:
+directories as follows:
 
     c++ -I. -Iinclude lex.yy.cpp lib/debug.cpp lib/error.cpp \
-        lib/input.cpp lib/matcher.cpp lib/pattern.cpp lib/utf8.cpp
+        lib/input.cpp lib/matcher.cpp lib/pattern.cpp lib/utf8.cpp lib/simd.cpp
 
-This compiles the code without SIMD optimizations.  SIMD intrinsics for SSE/AVX
-and ARM NEON/AArch64 are used to  speed up string search and newline detection
-in the library.  These optimizations are not applicable to scanners.
+This compiles the code *without SIMD optimizations*, despite compiling
+`lib/simd.cpp`.  SIMD intrinsics for SSE/AVX and ARM NEON/AArch64 are used to
+speed up string search and newline detection and counting in the library.
+These optimizations are for the most part applicable to speed up searching with
+the `Matcher::find()` method.
+
+To compile with NEON/AArch64 optimizations applied (omit `-mfpu=neon` for AArch64):
+
+    c++ -DHAVE_NEON -mfpu=neon -I. -Iinclude lex.yy.cpp lib/debug.cpp lib/error.cpp \
+        lib/input.cpp lib/matcher.cpp lib/pattern.cpp lib/utf8.cpp lib/simd.cpp
+
+To compile with SSE2 optimizations applied:
+
+    c++ -DHAVE_SSE2 -msse2 -I. -Iinclude lex.yy.cpp lib/debug.cpp lib/error.cpp \
+        lib/input.cpp lib/matcher.cpp lib/pattern.cpp lib/utf8.cpp lib/simd.cpp
+
+To compile with AVX2 optimizations applied and run-time detection of AVX2 using
+SSE2 as a fallback optimization when the CPU does not support AVX2:
+
+    c++ -DHAVE_AVX2 -mavx2 -I. -Iinclude lex.yy.cpp lib/debug.cpp lib/error.cpp \
+        lib/input.cpp lib/matcher.cpp lib/pattern.cpp lib/utf8.cpp lib/simd.cpp \
+        lib/matcher_avx2.cpp lib/simd_avx2.cpp
+
+To compile with AVX512BW optimizations applied and run-time detection of
+AVX512BW using AVX2 or SSE2 as a fallback optimization when the CPU does not
+support AVX512BW:
+
+    c++ -DHAVE_AVX512BW -mavx512bw -I. -Iinclude lex.yy.cpp lib/debug.cpp lib/error.cpp \
+        lib/input.cpp lib/matcher.cpp lib/pattern.cpp lib/utf8.cpp lib/simd.cpp \
+        lib/matcher_avx2.cpp lib/matcher_avx512bw.cpp lib/simd_avx2.cpp lib/simd_avx512bw.cpp
 
 🔝 [Back to table of contents](#)
 
@@ -9405,8 +9533,8 @@ in the library.  These optimizations are not applicable to scanners.
 How to minimize runtime memory usage                                {#memusage}
 ------------------------------------
 
-Runtime memory usage is determined by two entities, the pattern DFA and the
-input buffer:
+Runtime memory usage is largely determined by two entities, the pattern DFA and
+the input buffer:
 
 - Use <b>`reflex`</b> option `−−full` to create a statically-allocated table
   DFA for the scanner's regular expression patterns or option `−−fast` to
@@ -9415,43 +9543,87 @@ input buffer:
 
 - Compile the generated source code with `-DREFLEX_BUFSZ=16384` to override
   the internal buffer `reflex::AbstractMatcher::Const::BUFSZ` size.  By
-  default, the `reflex::AbstractMatcher::Const::BLOCK` size is 64K, which is
-  reasonably optimal for high-performance file searching and tokenization.  The
-  buffer is a sliding window over the input, i.e. input files may be much
-  larger than the buffer size.  A reasonably small `REFLEX_BUFSZ` is 16384
-  for a 16K buffer.  A small buffer automatically expands to accommodate larger
-  pattern matches.  However, when using the `line()` and `wline()` methods,
-  very long lines may not fit and the return string values of `line()` and
-  `wline()` may be truncated as a result.  Furtheremore, a small buffer
-  increase processing time, i.e. to frequently move the buffered window along a
-  file and increases the cost to decode UTF-16/32 into UTF-8 multibyte
-  sequences.
+  default, the buffer size is 256K, which is optimal for high-performance file
+  searching and tokenization.  The buffer is a sliding window over the input,
+  i.e. input files may be much larger than the buffer size.  A reasonably small
+  `REFLEX_BUFSZ` is 16384 for a 16K buffer.  A small buffer automatically
+  expands to accommodate larger pattern matches.  However, when using the
+  `line()` and `wline()` methods, very long lines may not fit and the return
+  string values of `line()` and `wline()` may be truncated as a result.
+  Furtheremore, a small buffer increase processing time, i.e. to frequently
+  move the buffered window along a file and increases the cost to decode
+  UTF-16/32 into UTF-8 multibyte sequences.
 
-@warning The value of `REFLEX_BUFSZ` should not be less than 8192.
+@warning The value of `REFLEX_BUFSZ` should not be less than 4096.
 
 🔝 [Back to table of contents](#)
 
 
-MSVC++ compiler bug                                                     {#msvc}
--------------------
+How to speed up matching and searching with zero copy overhead      {#zerocopy}
+--------------------------------------------------------------
 
-Some older MSVC++ compilers may cause problems with C++11 range-based loops.
-When a matcher object is constructed in a range-based loop it is destroyed
-before the first loop iteration.  This means that the following example
-crashes:
+All RE/flex matchers, including `reflex::Matcher`, `reflex::PCRE2Matcher`,
+`reflex::BoostMatcher`, `reflex::StdMatcher` and `reflex::FuzzyMatcher`, use an
+internal buffer of 256K.  This buffer is used to search and match input by
+copying the specified input into this buffer.  This allows the input to be
+modified, such as writing a zero byte to make the character strings returned by
+`text()` and `rest()` always 0-terminated.  The buffer shifts to handle input
+larger than 256K by consuming the input in blocks of up to 256K at a time.  The
+buffer only grows in size to accomodate pattern matches that are longer than
+256K, which will not happen when you specify regex patterns that do not match
+byte sequences longer than 256K, e.g. when patterns exclude `\n` (newline)
+characters when the input consists of regular lines of text.
+
+When the data you want to search resides in memory, you can eliminate the
+overhead of buffer copying as follows.  Before searching or matching the data,
+specify the memory region you want to search at address `b` of size `n` with
+`reflex::Matcher::buffer(b, n + 1)`.  Note that an extra byte after the end of
+the data must be avalable in this memory region, hence we pass `n + 1` to
+search `n` bytes.  The final byte at the end of the memory region will be set
+to zero when `unput(c)`, `wunput()`, `text()`, `rest()` or `span()` is used.
+But otherwise the memory region, including the final byte, remains completely
+untouched and you can safely specify `n + 1` even when the allocated region has
+`n` bytes of data.
+
+For example:
 
 ~~~{.cpp}
-    for (auto& match : reflex::BoostMatcher("\\w+", "How now brown cow.").find)
+    char *base = ...;  // points to the base address of the data
+    size_t size = ...; // length of the data including one extra byte
+    reflex::Matcher matcher(pattern);
+    matcher.buffer(base, size);
+    while (matcher.find() != 0)
+      std::cout << "Found: " << matcher.str() << std::endl;
+~~~
+
+See also \ref intro2 (towards the end of the section) and \ref reflex-input
+on zero copy overhead with RE/flex lexers.
+
+🔝 [Back to table of contents](#)
+
+
+A C++ range-based loop construct to avoid                               {#loop}
+-----------------------------------------
+
+When a matcher object is constructed as a temporary in a range-based loop it
+will be destroyed when we actually want to use it in the loop to find all
+matches.  This means that the following example crashes:
+
+~~~{.cpp}
+    for (auto& match : reflex::Matcher("\\w+", "How now brown cow.").find)
       std::cout << match.text() << std::endl;
 ~~~
 
-Instead, we should write the following:
+Instead, write:
 
 ~~~{.cpp}
-    reflex::BoostMatcher matcher("\\w+", "How now brown cow.");
+    reflex::Matcher matcher("\\w+", "How now brown cow.");
     for (auto& match : matcher.find)
       std::cout << match.text() << std::endl;
 ~~~
+
+Note that some C++23 compilers handle this just fine as support for range-based
+loop temporaries was proposed to the C++ standards committee.
 
 🔝 [Back to table of contents](#)
 
@@ -9518,4 +9690,4 @@ The Free Software Foundation maintains a
 
 🔝 [Back to table of contents](#)
 
-Copyright (c) 2016-2020, Robert van Engelen, Genivia Inc. All rights reserved.
+Copyright (c) 2016,2024, Robert van Engelen.  All rights reserved.

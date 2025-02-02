@@ -55,6 +55,7 @@ Tables::Tables()
   block_scripts();
   language_scripts();
   letter_scripts();
+  composer();
 
   range["Other"]                  = range["C"];
   range["Letter"]                 = range["L"];
@@ -91,9 +92,15 @@ Tables::Tables()
   range["Control"]                = range["Cc"];
   range["Format"]                 = range["Cf"];
 
-  range["d"] = range["Decimal_Digit_Number"];
-  range["l"] = range["Lowercase_Letter"];
-  range["u"] = range["Uppercase_Letter"];
+  range["Cntrl"] = range["C"];
+  range["Digit"] = range["Nd"];
+  range["Lower"] = range["Ll"];
+  range["Punct"] = range["P"];
+  range["Upper"] = range["Lu"];
+
+  range["d"] = range["Digit"];
+  range["l"] = range["Lower"];
+  range["u"] = range["Upper"];
   range["s"] = range["Space"];
   range["w"] = range["Word"];
 }
@@ -108,6 +115,16 @@ const int * range(const char *s)
   return NULL;
 }
 
+int compose(int prev, int next)
+{
+  Tables::Compose::const_iterator i = tables.compose.find(next);
+  if (i != tables.compose.end())
+    for (const int *p = i->second; p[0] != 0; p += 2)
+      if (p[0] == prev)
+        return p[1];
+  return -1;
 }
 
-}
+} // namespace Unicode
+
+} // namespace reflex

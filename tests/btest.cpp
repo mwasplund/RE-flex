@@ -97,6 +97,8 @@ Test tests[] = {
   { "(?i:abc)|(?i:xyz)", "", "", "abcABCxyzXYZ", { 1, 1, 2, 2 } },
   { "(?i)abc|(?-i:xyz)|(?-i:XYZ)", "", "", "abcABCxyzXYZ", { 1, 1, 2, 3 } },
   { "(?i:abc(?-i:xyz))|ABCXYZ", "", "", "abcxyzABCxyzABCXYZ", { 1, 1, 2 } },
+  { "(?i)a[^b]c|abc", "", "", "aacAACabcABCaBcAbC", { 1, 1, 2, 2, 2, 2 } },
+  { "(?i:abcd(ef)?)", "", "", "ABCdefabcd", { 1, 1 } },
   // Pattern option x
   { "(?x) a\tb\n c | ( xy ) z ?", "", "", "abcxy", { 1, 2 } },
   { "(?x: a b\n c)", "", "", "abc", { 1 } },
@@ -196,6 +198,7 @@ Test tests[] = {
   { "[][]", "", "", "[]", { 1, 1 } },
   // Lookahead
   { "a(?=bc)|ab(?=d)|bc|d", "", "", "abcdabd", { 1, 3, 4, 2, 4 } },
+  { "ab|a(?=[ab])", "", "", "abaab", { 1, 2, 1 } },
   // { "[ab]+(?=ab)|-|ab", "", "", "aaab-bbab", { 1, 3, 2, 1, 3 } }, // has trailing context (undefined as per POSIX)
   { "(?m)a(?=b?)|bc", "m", "", "aabc", { 1, 1, 2 } },
 #ifndef INTERACTIVE
@@ -222,8 +225,11 @@ Test tests[] = {
 #ifndef INTERACTIVE
   { "\\B(-|a)(-|a)\\B|b|#", "", "", "baab#--#", { 2, 1, 2, 3, 1, 3 } }, // boost has a partial match bug when interactive() blk=1
 #endif
+  { "a.*\\bbb.*\\b", "", "", "a--bb--cc--bb", { 1 } },
+  { "[ab]-\\<([bc]|\\<c)|c", "", "", "a-bc", { 1, 2 } },
+  { "a|(\\Bb?)*c", "", "", "abc", { 1, 2 } },
   { "-\\b(-|a)(-|a)\\b", "", "", "-aa", { 1 } },
-  { "a\\b(-|a)(-|a)\\b", "", "", "a-a", { 1 } },
+  { "a?\\b(-|a)(-|a)\\b|b", "", "", "a-ba-a", { 1, 2, 1 } },
 #ifndef INTERACTIVE
   { "a?\\>(-|a)(-|a)\\b| ", "", "", "a-a-a", { 1, 1 } }, // boost has a partial match bug when interactive() blk=1 & does not check \> at start, so accepts more liberally
 #endif

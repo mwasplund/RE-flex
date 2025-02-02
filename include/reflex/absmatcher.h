@@ -30,7 +30,7 @@
 @file      absmatcher.h
 @brief     RE/flex abstract matcher base class and pattern matcher class
 @author    Robert van Engelen - engelen@genivia.com
-@copyright (c) 2016-2022, Robert van Engelen, Genivia Inc. All rights reserved.
+@copyright (c) 2016-2024, Robert van Engelen, Genivia Inc. All rights reserved.
 @copyright (c) BSD-3 License - see LICENSE.txt
 */
 
@@ -42,12 +42,12 @@
 #define WITH_REALLOC 1
 #endif
 
-/// This compile-time option speeds up matching, but slows input().
+/// This compile-time option speeds up matching, but slows input() somewhat.
 #ifndef WITH_FAST_GET
 #define WITH_FAST_GET 1
 #endif
 
-/// This compile-time option adds span(), line(), wline(), bol(), eol()
+/// This compile-time option adds span(), line(), wline(), bol(), eol().
 #ifndef WITH_SPAN
 #define WITH_SPAN 1
 #endif
@@ -59,13 +59,14 @@
 #include <reflex/simd.h>
 #ifndef SOUP_BUILD
 #include <cstdlib>
+#include <cstdint>
 #include <cctype>
 #include <iterator>
 #endif
 
 namespace reflex {
 
-/// Check ASCII word-like character `[A-Za-z0-9_]`, permitting the character range 0..303 (0x12F) and EOF.
+/// Check ASCII word-like character `[A-Za-z0-9_]`, permitting the character range 0..303 (0x12f) and EOF.
 inline int isword(int c) ///< Character to check
   /// @returns nonzero if argument c is in `[A-Za-z0-9_]`, zero otherwise
 {
@@ -85,7 +86,7 @@ buf_=|  |text|rest|free|
         cur_ pos_ end_ max_
 
 buf_ // points to buffered input, buffer may grow to fit long matches
-cur_ // current position in buf_ while matching text, cur_ = pos_ afterwards, can be changed by more()
+cur_ // current position in buf_ while matching text, cur_ = pos_ afterwards, may be changed by peek() and more()
 pos_ // position in buf_ to start the next match
 end_ // position in buf_ that is free to fill with more input
 max_ // allocated size of buf_, must ensure that max_ > end_ for text() to add a final \0
@@ -112,17 +113,17 @@ class AbstractMatcher {
     static const int EOB      = EOF;        ///< end of buffer meta-char marker
     static const size_t BLOCK = 4096;       ///< minimum remaining unused space in the buffer, to prevent excessive shifting
 #ifndef REFLEX_BUFSZ
-    static const size_t BUFSZ = (64*1024);  ///< initial buffer size, at least 4096 bytes
+    static const size_t BUFSZ = (256*1024); ///< initial buffer size, at least 4096 bytes
 #else
     static const size_t BUFSZ = REFLEX_BUFSZ;
 #endif
 #ifndef REFLEX_BOLSZ
-    static const size_t BOLSZ = (3*BUFSZ);  ///< max begin of line size till match to retain in memory by growing the buffer
+    static const size_t BOLSZ = BUFSZ;      ///< max begin of line size till match to retain in memory by growing the buffer
 #else
     static const size_t BOLSZ = REFLEX_BOLSZ;
 #endif
-    static const size_t REDO  = 0x7FFFFFFF; ///< reflex::Matcher::accept() returns "redo" with reflex::Matcher option "A"
-    static const size_t EMPTY = 0xFFFFFFFF; ///< accept() returns "empty" last split at end of input
+    static const size_t REDO  = 0x7fffffff; ///< reflex::Matcher::accept() returns "redo" with reflex::Matcher option "A"
+    static const size_t EMPTY = 0xffffffff; ///< accept() returns "empty" last split at end of input
   };
   /// Context returned by before() and after()
   struct Context {
@@ -155,11 +156,13 @@ class AbstractMatcher {
         A(false),
         N(false),
         W(false),
+        X(false),
         T(8)
     { }
     bool A; ///< accept any/all (?^X) negative patterns as Const::REDO accept index codes
     bool N; ///< nullable, find may return empty match (N/A to scan, split, matches)
-    bool W; ///< half-check for "whole words", check only left of \< and right of \> for non-word character
+    bool W; ///< reflex::Matcher matches whole words as if bound by \< and \>
+    bool X; ///< reflex::LineMatcher matches empty lines
     char T; ///< tab size, must be a power of 2, default is 8, for column count and indent \i, \j, and \k
   };
   /// AbstractMatcher::Iterator class for scanning, searching, and splitting input character sequences.
@@ -337,7 +340,7 @@ class AbstractMatcher {
     if (own_)
     {
 #if WITH_REALLOC
-#if (defined(__WIN32__) || defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(__BORLANDC__)) && !defined(__CYGWIN__)
+#if defined(__WIN32__) || defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(__BORLANDC__)
       _aligned_free(static_cast<void*>(buf_));
 #else
       std::free(static_cast<void*>(buf_));
@@ -357,7 +360,8 @@ class AbstractMatcher {
     {
       opt_.A = false; // when true: accept any/all (?^X) negative patterns as Const::REDO accept index codes
       opt_.N = false; // when true: find may return empty match (N/A to scan, split, matches)
-      opt_.W = false; // when true: half-check for "whole words", check only left of \< and right of \> for non-word character
+      opt_.W = false; // when true: reflex::Matcher matches whole words as if bound by \< and \>
+      opt_.X = false; // when true: reflex::LineMatcher matches empty lines
       opt_.T = 8;     // tab size 1, 2, 4, or 8
       if (opt)
       {
@@ -374,6 +378,9 @@ class AbstractMatcher {
             case 'W':
               opt_.W = true;
               break;
+            case 'X':
+              opt_.X = true;
+              break;
             case 'T':
               opt_.T = isdigit(*(s += (s[1] == '=') + 1)) ? static_cast<char>(*s - '0') : 0;
               break;
@@ -383,9 +390,10 @@ class AbstractMatcher {
     }
     if (!own_)
     {
-      max_ = Const::BUFSZ;
+      // adjust max to add byte for a terminating \0
+      max_ = Const::BUFSZ + 1;
 #if WITH_REALLOC
-#if (defined(__WIN32__) || defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(__BORLANDC__)) && !defined(__CYGWIN__)
+#if defined(__WIN32__) || defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(__BORLANDC__)
       buf_ = static_cast<char*>(_aligned_malloc(max_, 4096));
       if (buf_ == NULL)
         throw std::bad_alloc();
@@ -420,9 +428,11 @@ class AbstractMatcher {
 #endif
     cno_ = 0;
     num_ = 0;
+    res_ = 0;
     own_ = true;
     eof_ = false;
     mat_ = false;
+    cml_ = false;
   }
   /// Set buffer block size for reading: use 0 (or omit argument) to buffer all input in which case returns true if all the data could be read and false if a read error occurred.
   bool buffer(size_t blk = 0) ///< new block size between 1 and Const::BLOCK, or 0 to buffer all input (default)
@@ -434,13 +444,16 @@ class AbstractMatcher {
     blk_ = blk;
     if (blk > 0 || eof_ || in.eof())
       return true;
-    size_t n = in.size(); // get the (rest of the) data size, which is 0 if unknown (e.g. reading input from a TTY or a pipe)
+    // get the (rest of the) data size, which is 0 if unknown (e.g. reading input from a TTY or a pipe)
+    size_t n = in.size();
     if (n > 0)
     {
-      (void)grow(n + 1); // now attempt to fetch all (remaining) data to store in the buffer, +1 for a final \0
+      // now attempt to fetch all (remaining) data to store in the buffer, +1 for a final \0
+      (void)grow(n + 1);
       end_ += get(buf_, n);
     }
-    while (in.good()) // there is more to get while good(), e.g. via wrap()
+    // there is more to get while good(), e.g. via wrap()
+    while (in.good())
     {
       (void)grow();
       size_t len = get(buf_ + end_, max_ - end_);
@@ -448,16 +461,22 @@ class AbstractMatcher {
         break;
       end_ += len;
     }
+    // make sure we have room for a final \0
     if (end_ == max_)
-      (void)grow(1); // make sure we have room for a final \0
+      (void)grow(1);
     eof_ = in.eof();
     return eof_;
   }
 #if WITH_SPAN
   /// Set event handler functor to invoke when the buffer contents are shifted out, e.g. for logging the data searched.
-  void set_handler(Handler *handler)
+  inline void set_handler(Handler *handler)
   {
     evh_ = handler;
+  }
+  /// Set reserved bytes for buffer shifting
+  inline void set_reserve(size_t n)
+  {
+    res_ = n;
   }
   /// Get the buffered context before the matching line.
   inline Context before()
@@ -487,7 +506,7 @@ class AbstractMatcher {
     (void)buffer(1);
   }
   /// Flush the buffer's remaining content.
-  void flush()
+  inline void flush()
   {
     DBGLOG("AbstractMatcher::flush()");
     pos_ = end_;
@@ -526,7 +545,7 @@ class AbstractMatcher {
       if (own_)
       {
 #if WITH_REALLOC
-#if (defined(__WIN32__) || defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(__BORLANDC__)) && !defined(__CYGWIN__)
+#if defined(__WIN32__) || defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(__BORLANDC__)
         _aligned_free(static_cast<void*>(buf_));
 #else
         std::free(static_cast<void*>(buf_));
@@ -558,9 +577,11 @@ class AbstractMatcher {
 #endif
       cno_ = 0;
       num_ = 0;
+      res_ = 0;
       own_ = false;
       eof_ = true;
       mat_ = false;
+      cml_ = false;
     }
     return *this;
   }
@@ -595,7 +616,7 @@ class AbstractMatcher {
   {
     return txt_ + len_;
   }
-  /// Returns 0-terminated string of the text matched, does not include matched \0s, this is a constant-time operation.
+  /// Returns 0-terminated pattern match as a char pointer, does not include matched \0s, this is a constant-time operation.
   inline const char *text()
     /// @returns 0-terminated const char* string with text matched
   {
@@ -606,19 +627,27 @@ class AbstractMatcher {
     }
     return txt_;
   }
-  /// Returns the text matched as a string, a copy of text(), may include matched \0s.
+#if __cplusplus >= 201703L
+  /// Returns the pattern match as a string_view (zero copy), does not include a terminating \0, this is a constant-time operation.
+  inline const std::string_view strview() const
+    /// @returns string_view with text matched
+  {
+    return std::string_view(txt_, len_);
+  }
+#endif
+  /// Returns the text matched as a string, a copy of text(), may include pattern-matched \0s.
   inline std::string str() const
     /// @returns string with text matched
   {
     return std::string(txt_, len_);
   }
-  /// Returns the match as a wide string, converted from UTF-8 text(), may include matched \0s.
+  /// Returns the pattern match as a wide string, converted from UTF-8 text(), may include pattern-matched \0s.
   inline std::wstring wstr() const
     /// @returns wide string with text matched
   {
     return wcs(txt_, len_);
   }
-  /// Returns the length of the matched text in number of bytes, including matched \0s, a constant-time operation.
+  /// Returns the length of the matched text in number of bytes, including pattern-matched \0s, a constant-time operation.
   inline size_t size() const
     /// @returns match size in bytes
   {
@@ -631,7 +660,7 @@ class AbstractMatcher {
     size_t n = 0;
     const char *e = txt_ + len_;
     for (const char *s = txt_; s < e; ++s)
-      n += (*s & 0xC0) != 0x80;
+      n += (*s & 0xc0) != 0x80;
     return n;
   }
   /// Returns the first 8-bit character of the text matched.
@@ -646,6 +675,13 @@ class AbstractMatcher {
   {
     return utf8(txt_);
   }
+#if WITH_SPAN
+  /// Set or reset mode to count matching lines only and skip other (e.g. for speed).
+  inline void lineno_skip(bool f = false)
+  {
+    cml_ = f;
+  }
+#endif
   /// Set or change the starting line number of the last match.
   inline void lineno(size_t n) ///< new line number
   {
@@ -653,7 +689,7 @@ class AbstractMatcher {
     lno_ = n;
   }
   /// Updates and returns the starting line number of the match in the input character sequence.
-  inline size_t lineno()
+  size_t lineno()
     /// @returns line number
   {
 #if WITH_SPAN
@@ -662,80 +698,15 @@ class AbstractMatcher {
       const char *s = lpb_;
       const char *t = txt_;
       size_t n = 0;
-#if defined(HAVE_AVX512BW) && (!defined(_MSC_VER) || defined(_WIN64))
-      if (have_HW_AVX512BW())
+      if (cml_)
       {
-        n += simd_nlcount_avx512bw(s, t);
-      }
-      else if (have_HW_AVX2())
-      {
-        n += simd_nlcount_avx2(s, t);
+        // count number of matching lines only, not line numbers
+        n = std::memchr(s, '\n', t - s) != NULL;
       }
       else
       {
-        __m128i vlcn = _mm_set1_epi8('\n');
-        while (s + 16 <= t)
-        {
-          __m128i vlcm = _mm_loadu_si128(reinterpret_cast<const __m128i*>(s));
-          __m128i vlceq = _mm_cmpeq_epi8(vlcm, vlcn);
-          uint32_t mask = _mm_movemask_epi8(vlceq);
-          n += popcount(mask);
-          s += 16;
-        }
-      }
-#elif defined(HAVE_AVX2)
-      if (have_HW_AVX2())
-      {
-        n += simd_nlcount_avx2(s, t);
-      }
-      else
-      {
-        __m128i vlcn = _mm_set1_epi8('\n');
-        while (s + 16 <= t)
-        {
-          __m128i vlcm = _mm_loadu_si128(reinterpret_cast<const __m128i*>(s));
-          __m128i vlceq = _mm_cmpeq_epi8(vlcm, vlcn);
-          uint32_t mask = _mm_movemask_epi8(vlceq);
-          n += popcount(mask);
-          s += 16;
-        }
-      }
-#elif defined(HAVE_SSE2)
-      __m128i vlcn = _mm_set1_epi8('\n');
-      while (s + 16 <= t)
-      {
-        __m128i vlcm = _mm_loadu_si128(reinterpret_cast<const __m128i*>(s));
-        __m128i vlceq = _mm_cmpeq_epi8(vlcm, vlcn);
-        uint32_t mask = _mm_movemask_epi8(vlceq);
-        n += popcount(mask);
-        s += 16;
-      }
-#elif defined(HAVE_NEON)
-      {
-        // ARM AArch64/NEON SIMD optimized loop? - no code that runs faster than the code below?
-      }
-#endif
-      uint32_t n0 = 0, n1 = 0, n2 = 0, n3 = 0;
-      // clang/gcc 4-way auto-vectorizable loop
-      while (s + 3 < t)
-      {
-        n0 += s[0] == '\n';
-        n1 += s[1] == '\n';
-        n2 += s[2] == '\n';
-        n3 += s[3] == '\n';
-        s += 4;
-      }
-      n += n0 + n1 + n2 + n3;
-      // epilogue
-      if (s < t)
-      {
-        n += *s == '\n';
-        if (++s < t)
-        {
-          n += *s == '\n';
-          if (++s < t)
-            n += *s == '\n';
-        }
+        // count line numbers
+        n = nlcount(s, t);
       }
       // if newlines are detected, then find begin of the last line to adjust bol
       if (n > 0)
@@ -743,7 +714,7 @@ class AbstractMatcher {
         lno_ += n;
         s = lpb_;
         // clang/gcc 4-way auto-vectorizable loop
-        while (t - 4 >= s)
+        while (t >= s + 4)
         {
           if ((t[-1] == '\n') | (t[-2] == '\n') | (t[-3] == '\n') | (t[-4] == '\n'))
             break;
@@ -780,7 +751,7 @@ class AbstractMatcher {
       else
       {
         // count column offset in UTF-8 chars
-        k += ((*s & 0xC0) != 0x80);
+        k += ((*s & 0xc0) != 0x80);
       }
       ++s;
     }
@@ -832,7 +803,7 @@ class AbstractMatcher {
       if (*s == '\t')
         k += 1 + (~k & m); // count tab spacing
       else
-        k += ((*s & 0xC0) != 0x80); // count column offset in UTF-8 chars
+        k += ((*s & 0xc0) != 0x80); // count column offset in UTF-8 chars
       ++s;
     }
     cpb_ = txt_;
@@ -855,7 +826,7 @@ class AbstractMatcher {
       if (*s == '\t')
         k += 1 + (~k & (opt_.T - 1)); // count tab spacing
       else if (*s != '\r' && *s != '\n')
-        k += ((*s & 0xC0) != 0x80); // count column offset in UTF-8 chars
+        k += ((*s & 0xc0) != 0x80); // count column offset in UTF-8 chars
       ++s;
     }
     return k - n;
@@ -881,7 +852,7 @@ class AbstractMatcher {
       if (*s == '\t')
         n += 1 + (~n & (opt_.T - 1));
       else
-        n += (*s & 0xC0) != 0x80;
+        n += (*s & 0xc0) != 0x80;
     }
     return n - m;
 #endif
@@ -906,7 +877,7 @@ class AbstractMatcher {
       if (*s == '\t')
         k += 1 + (~k & (opt_.T - 1));
       else
-        k += (*s & 0xC0) != 0x80;
+        k += (*s & 0xc0) != 0x80;
     }
     return k > 0 ? k - 1 : 0;
   }
@@ -983,13 +954,13 @@ class AbstractMatcher {
     else if (got_ == '\n')
       got_ = Const::UNK;
   }
-  /// Returns true if this matcher matched text that begins a word.
+  /// Returns true if this matcher matched text that begins an ASCII word.
   inline bool at_bow()
     /// @returns true if this matcher matched text that begins a word
   {
     return !isword(got_) && isword(txt_ < buf_ + end_ ? static_cast<unsigned char>(*txt_) : peek_more());
   }
-  /// Returns true if this matcher matched text that ends a word.
+  /// Returns true if this matcher matched text that ends an ASCII word.
   inline bool at_eow()
     /// @returns true if this matcher matched text that ends a word
   {
@@ -1030,7 +1001,7 @@ class AbstractMatcher {
       return EOF;
     if (static_cast<unsigned char>(*s++ = c) >= 0x80)
     {
-      while (((++*s = get()) & 0xC0) == 0x80)
+      while (((*s++ = get()) & 0xc0) == 0x80)
         continue;
       got_ = static_cast<unsigned char>(buf_[cur_ = --pos_]);
     }
@@ -1143,21 +1114,50 @@ class AbstractMatcher {
     }
     return buf_ + end_;
   }
+  /// Return pointer to the end of the match + len after, or at end of file, DANGER: invalidates previous bol() and text() pointers, use aft() before bol(), text(), begin(), and end() when those are used.
+  inline const char *aft(size_t len)
+    /// @returns pointer to the end of the match + len.
+  {
+    size_t size = fetch(len);
+    return size >= len ? buf_ + pos_ + len : buf_ + pos_ + size;
+  }
+  /// Return pointer to the begin of the match - len before, or at the begin of the file.
+  inline const char *bef(size_t len)
+    /// @returns pointer to the begin of the match - len.
+  {
+    return txt_ >= buf_ + len ? txt_ - len : buf_;
+  }
+  /// Return number of bytes available given number of bytes to fetch ahead, limited by input size and buffer size, DANGER: invalidates previous bol() and text() pointers, use fetch() before bol(), text(), begin(), and end() when those are used.
+  inline size_t fetch(size_t len)
+    /// @returns number of bytes available after fetching.
+  {
+    DBGLOG("AbstractMatcher::fetch(%zu)", len);
+    if (eof_)
+      return 0;
+    if (pos_ + len <= end_)
+      return end_ - pos_ ;
+    if (end_ + len + 1 >= max_)
+      (void)grow();
+    if (end_ + len + 1 >= max_)
+      len = max_ - end_ - 1;
+    end_ += get(buf_ + end_, len);
+    return end_ - pos_;
+  }
   /// Returns the number of bytes in the buffer available to search from the current begin()/text() position.
-  size_t avail()
+  inline size_t avail()
   {
     if (peek() == EOF)
       return 0;
     return end_ - (txt_ - buf_);
   }
   /// Returns the byte offset of the match from the start of the line.
-  size_t border()
+  inline size_t border()
     /// @returns border offset
   {
     return txt_ - bol();
   }
   /// Enlarge the match to span the entire line of input (excluding \n), return text().
-  const char *span()
+  inline const char *span()
     /// @returns const char* span of text for the entire line
   {
     DBGLOG("AbstractMatcher::span()");
@@ -1173,7 +1173,7 @@ class AbstractMatcher {
     return text();
   }
   /// Returns the line of input (excluding \n) as a string containing the matched text as a substring.
-  std::string line()
+  inline std::string line()
     /// @returns matching line as a string
   {
     DBGLOG("AbstractMatcher::line()");
@@ -1183,14 +1183,14 @@ class AbstractMatcher {
     return std::string(b, e - b);
   }
   /// Returns the line of input (excluding \n) as a wide string containing the matched text as a substring.
-  std::wstring wline()
+  inline std::wstring wline()
     /// @returns matching line as a wide string
   {
     DBGLOG("AbstractMatcher::wline()");
     reset_text();
     const char *e = eol(); // warning: must call eol() before bol()
     const char *b = bol();
-    while (b < e && (*b & 0xC0) == 0x80) // make sure we advance forward to valid UTF-8
+    while (b < e && (*b & 0xc0) == 0x80) // make sure we advance forward to valid UTF-8
       ++b;
     return wcs(b, e - b);
   }
@@ -1211,17 +1211,10 @@ class AbstractMatcher {
         set_current(txt_ - buf_);
         return true;
       }
-      if (eof_)
-        break;
       pos_ = cur_ = end_;
       txt_ = buf_ + end_;
-      (void)grow();
-      end_ += get(buf_ + end_, blk_ > 0 ? blk_ : max_ - end_ - 1);
-      if (pos_ >= end_ && !wrap())
-      {
-        eof_ = true;
+      if (peek_more() == EOF)
         break;
-      }
     }
     set_current(end_);
     return false;
@@ -1286,12 +1279,12 @@ class AbstractMatcher {
     return text();
   }
   /// Append the next match to the currently matched text returned by AbstractMatcher::text, when the next match found is adjacent to the current match.
-  void more()
+  inline void more()
   {
     cur_ = txt_ - buf_;
   }
   /// Truncate the AbstractMatcher::text length of the match to n characters in length and reposition for next match.
-  void less(size_t n) ///< truncated string length
+  inline void less(size_t n) ///< truncated string length
   {
     if (n < len_)
     {
@@ -1304,80 +1297,80 @@ class AbstractMatcher {
     }
   }
   /// Cast this matcher to positive integer indicating the nonzero capture index of the matched text in the pattern, same as AbstractMatcher::accept.
-  operator size_t() const
+  inline operator size_t() const
     /// @returns nonzero capture index of a match, which may be matcher dependent, or zero for a mismatch
   {
     return accept();
   }
   /// Cast this matcher to a std::string of the text matched by this matcher.
-  operator std::string() const
+  inline operator std::string() const
     /// @returns std::string with matched text
   {
     return str();
   }
   /// Cast this matcher to a std::wstring of the text matched by this matcher.
-  operator std::wstring() const
+  inline operator std::wstring() const
     /// @returns std::wstring converted to UCS from the 0-terminated matched UTF-8 text
   {
     return wstr();
   }
   /// Cast the match to std::pair<size_t,std::wstring>(accept(), wstr()), useful for tokenization into containers.
-  operator std::pair<size_t,std::string>() const
+  inline operator std::pair<size_t,std::string>() const
     /// @returns std::pair<size_t,std::wstring>(accept(), wstr())
   {
     return pair();
   }
   /// Returns true if matched text is equal to a string, useful for std::algorithm.
-  bool operator==(const char *rhs) ///< rhs string to compare to
+  inline bool operator==(const char *rhs) ///< rhs string to compare to
     /// @returns true if matched text is equal to rhs string
     const
   {
     return std::strncmp(rhs, txt_, len_) == 0 && rhs[len_] == '\0';
   }
   /// Returns true if matched text is equalt to a string, useful for std::algorithm.
-  bool operator==(const std::string& rhs) ///< rhs string to compare to
+  inline bool operator==(const std::string& rhs) ///< rhs string to compare to
     /// @returns true if matched text is equal to rhs string
     const
   {
     return rhs.size() == len_ && rhs.compare(0, std::string::npos, txt_, len_) == 0;
   }
   /// Returns true if capture index is equal to a given size_t value, useful for std::algorithm.
-  bool operator==(size_t rhs) ///< capture index to compare accept() to
+  inline bool operator==(size_t rhs) ///< capture index to compare accept() to
     /// @returns true if capture index is equal to rhs
     const
   {
     return accept() == rhs;
   }
   /// Returns true if capture index is equal to a given int value, useful for std::algorithm.
-  bool operator==(int rhs) ///< capture index to compare accept() to
+  inline bool operator==(int rhs) ///< capture index to compare accept() to
     /// @returns true if capture index is equal to rhs
     const
   {
     return static_cast<int>(accept()) == rhs;
   }
   /// Returns true if matched text is not equal to a string, useful for std::algorithm.
-  bool operator!=(const char *rhs) ///< rhs string to compare to
+  inline bool operator!=(const char *rhs) ///< rhs string to compare to
     /// @returns true if matched text is not equal to rhs string
     const
   {
     return std::strncmp(rhs, txt_, len_) != 0 || rhs[len_] != '\0'; // if static checkers complain here, they are wrong
   }
   /// Returns true if matched text is not equal to a string, useful for std::algorithm.
-  bool operator!=(const std::string& rhs) ///< rhs string to compare to
+  inline bool operator!=(const std::string& rhs) ///< rhs string to compare to
     /// @returns true if matched text is not equal to rhs string
     const
   {
     return rhs.size() > len_ || rhs.compare(0, std::string::npos, txt_, len_) != 0;
   }
   /// Returns true if capture index is not equal to a given size_t value, useful for std::algorithm.
-  bool operator!=(size_t rhs) ///< capture index to compare accept() to
+  inline bool operator!=(size_t rhs) ///< capture index to compare accept() to
     /// @returns true if capture index is not equal to rhs
     const
   {
     return accept() != rhs;
   }
   /// Returns true if capture index is not equal to a given int value, useful for std::algorithm.
-  bool operator!=(int rhs) ///< capture index to compare accept() to
+  inline bool operator!=(int rhs) ///< capture index to compare accept() to
     /// @returns true if capture index is not equal to rhs
     const
   {
@@ -1430,18 +1423,22 @@ class AbstractMatcher {
 #if WITH_SPAN
     (void)lineno();
     cno_ = 0;
-    if (bol_ + Const::BOLSZ - buf_ < txt_ - bol_ && evh_ == NULL)
+    if (bol_ + Const::BOLSZ - buf_ < txt_ - bol_)
     {
-      // this line is very long, so shift all the way to the match instead of to the begin of the last line
+      // this line is too long, shift all the way to the match instead of to the begin of the last line
       DBGLOG("Line in buffer is too long to shift, moving bol position to text match position");
       (void)columno();
       bol_ = txt_;
     }
     size_t gap = bol_ - buf_;
-    if (gap > 0)
+    if (gap > res_)
     {
+      // keep reserved bytes before the current line in the buffer, when nonzero (default is zero)
+      gap -= res_;
+      // invoke user-defined handler when defined
       if (evh_ != NULL)
         (*evh_)(*this, buf_, gap, num_);
+      // update state and shift
       cur_ -= gap;
       ind_ -= gap;
       pos_ -= gap;
@@ -1452,18 +1449,22 @@ class AbstractMatcher {
       num_ += gap;
       std::memmove(buf_, buf_ + gap, end_);
     }
-    if (max_ - end_ >= need)
+    if (max_ - end_ >= need + 1)
     {
       DBGLOG("Shift buffer to close gap of %zu bytes", gap);
     }
     else
     {
       size_t newmax = end_ + need;
+      // adjust max to ignore last byte
+      --max_;
       while (max_ < newmax)
         max_ *= 2;
+      // adjust max to add byte for a terminating \0
+      ++max_;
       DBGLOG("Expand buffer to %zu bytes", max_);
 #if WITH_REALLOC
-#if (defined(__WIN32__) || defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(__BORLANDC__)) && !defined(__CYGWIN__)
+#if defined(__WIN32__) || defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(__BORLANDC__)
       char *newbuf = static_cast<char*>(_aligned_realloc(static_cast<void*>(buf_), max_, 4096));
 #else
       char *newbuf = static_cast<char*>(std::realloc(static_cast<void*>(buf_), max_));
@@ -1477,10 +1478,10 @@ class AbstractMatcher {
 #endif
       txt_ = newbuf + (txt_ - buf_);
       lpb_ = newbuf + (lpb_ - buf_);
+      bol_ = newbuf + (bol_ - buf_);
       buf_ = newbuf;
     }
-    bol_ = buf_;
-    cpb_ = buf_;
+    cpb_ = bol_;
 #else
     size_t gap = txt_ - buf_;
     if (max_ - end_ + gap >= need)
@@ -1514,7 +1515,7 @@ class AbstractMatcher {
         num_ += gap;
 #if WITH_REALLOC
         std::memmove(buf_, txt_, end_);
-#if (defined(__WIN32__) || defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(__BORLANDC__)) && !defined(__CYGWIN__)
+#if defined(__WIN32__) || defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(__BORLANDC__)
         char *newbuf = static_cast<char*>(_aligned_realloc(static_cast<void*>(buf_), max_, 4096));
 #else
         char *newbuf = static_cast<char*>(std::realloc(static_cast<void*>(buf_), max_));
@@ -1562,7 +1563,7 @@ class AbstractMatcher {
     }
 #endif
   }
-  /// Reset the matched text by removing the terminating \0, which is needed to search for a new match.
+  /// Reset the matched text by removing the terminating \0 when applicable, which is needed to search for a new match.
   inline void reset_text()
   {
     if (chr_ != '\0')
@@ -1582,11 +1583,18 @@ class AbstractMatcher {
     got_ = loc > 0 ? static_cast<unsigned char>(buf_[loc - 1]) : Const::UNK;
 #endif
   }
-  /// Set the current match position in the buffer.
-  inline void set_current_match(size_t loc) ///< new location in buffer
+  /// Set the current match position in the buffer and peek for more text, allows large buffer shifts that aren't pinned to txt_.
+  inline void set_current_and_peek_more(size_t loc) ///< we don't need to keep text before this location in the buffer
   {
+    size_t old = txt_ - buf_;
     set_current(loc);
-    txt_ = buf_ + cur_;
+    txt_ = buf_ + loc; // set txt_ to allow buffer shift and flush out the buffer up to txt_
+    (void)peek_more();
+    size_t gap = buf_ + loc - txt_; // loc - (txt_ - buf_) is the buffer shift distance, zero if no shift
+    if (gap <= old)
+      txt_ = buf_ + old - gap; // old txt_ position in the buffer was not shifted out and is still valid
+    else
+      txt_ = buf_; // old txt_ position was shifted out, set to the begin of the buffer
   }
   /// Get the next character and grow the buffer to make more room if necessary.
   inline int get_more()
@@ -1656,9 +1664,11 @@ class AbstractMatcher {
 #endif
   size_t      cno_; ///< column number count (cached)
   size_t      num_; ///< character count of the input till bol_
+  size_t      res_; ///< reserve bytes to keep in the buffer before bol_ when shifting, use only w/o evh_() set
   bool        own_; ///< true if AbstractMatcher::buf_ was allocated and should be deleted
   bool        eof_; ///< input has reached EOF
   bool        mat_; ///< true if AbstractMatcher::matches() was successful
+  bool        cml_; ///< true when counting matching lines instead of line numbers
 };
 
 /// The pattern matcher class template extends abstract matcher base class.
@@ -1671,7 +1681,7 @@ class PatternMatcher : public AbstractMatcher {
     :
       AbstractMatcher(matcher.in, matcher.opt_),
       pat_(matcher.pat_),
-      own_(false)
+      del_(false)
   {
     DBGLOG("PatternMatcher::PatternMatcher(matcher)");
   }
@@ -1679,11 +1689,11 @@ class PatternMatcher : public AbstractMatcher {
   virtual ~PatternMatcher()
   {
     DBGLOG("PatternMatcher::~PatternMatcher()");
-    if (own_ && pat_ != NULL)
+    if (del_ && pat_ != NULL)
       delete pat_;
   }
   /// Assign a matcher, the underlying pattern object is shared (not deep copied).
-  PatternMatcher& operator=(const PatternMatcher& matcher) ///< matcher with pattern to use (pattern may be shared)
+  virtual PatternMatcher& operator=(const PatternMatcher& matcher) ///< matcher with pattern to use (pattern may be shared)
   {
     scan.init(this, Const::SCAN);
     find.init(this, Const::FIND);
@@ -1691,9 +1701,7 @@ class PatternMatcher : public AbstractMatcher {
     in = matcher.in;
     reset();
     opt_ = matcher.opt_;
-    pat_ = matcher.pat_,
-    own_ = false;
-    return *this;
+    return pattern(matcher.pat_);
   }
   /// Set the pattern to use with this matcher as a shared pointer to another matcher pattern.
   virtual PatternMatcher& pattern(const PatternMatcher& matcher) ///< the other matcher
@@ -1709,10 +1717,10 @@ class PatternMatcher : public AbstractMatcher {
     DBGLOG("PatternMatcher::pattern()");
     if (pat_ != &pattern)
     {
-      if (own_ && pat_ != NULL)
+      if (del_ && pat_ != NULL)
         delete pat_;
       pat_ = &pattern;
-      own_ = false;
+      del_ = false;
     }
     return *this;
   }
@@ -1723,10 +1731,10 @@ class PatternMatcher : public AbstractMatcher {
     DBGLOG("PatternMatcher::pattern()");
     if (pat_ != pattern)
     {
-      if (own_ && pat_ != NULL)
+      if (del_ && pat_ != NULL)
         delete pat_;
       pat_ = pattern;
-      own_ = false;
+      del_ = false;
     }
     return *this;
   }
@@ -1735,10 +1743,10 @@ class PatternMatcher : public AbstractMatcher {
     /// @returns this matcher
   {
     DBGLOG("PatternMatcher::pattern(\"%s\")", pattern);
-    if (own_ && pat_ != NULL)
+    if (del_ && pat_ != NULL)
       delete pat_;
     pat_ = new Pattern(pattern);
-    own_ = true;
+    del_ = true;
     return *this;
   }
   /// Set the pattern from a regex string to use with this matcher.
@@ -1746,26 +1754,26 @@ class PatternMatcher : public AbstractMatcher {
     /// @returns this matcher
   {
     DBGLOG("PatternMatcher::pattern(\"%s\")", pattern.c_str());
-    if (own_ && pat_ != NULL)
+    if (del_ && pat_ != NULL)
       delete pat_;
     pat_ = new Pattern(pattern);
-    own_ = true;
+    del_ = true;
     return *this;
   }
   /// Returns true if this matcher has a pattern.
-  bool has_pattern() const
+  inline bool has_pattern() const
     /// @returns true if this matcher has a pattern
   {
     return pat_ != NULL;
   }
   /// Returns true if this matcher has its own pattern not received from another matcher (responsible to delete).
-  bool own_pattern() const
+  inline bool own_pattern() const
     /// @returns true if this matcher has its own pattern
   {
-    return own_ && pat_ != NULL;
+    return del_ && pat_ != NULL;
   }
   /// Returns a reference to the pattern object associated with this matcher.
-  const Pattern& pattern() const
+  virtual const Pattern& pattern() const
     /// @returns reference to pattern object
   {
     ASSERT(pat_ != NULL);
@@ -1780,7 +1788,7 @@ class PatternMatcher : public AbstractMatcher {
     :
       AbstractMatcher(input, opt),
       pat_(pattern),
-      own_(false)
+      del_(false)
   { }
   /// Construct a base abstract matcher from a persistent pattern object (that is shared with this class) and an input character sequence.
   PatternMatcher(
@@ -1790,7 +1798,7 @@ class PatternMatcher : public AbstractMatcher {
     :
       AbstractMatcher(input, opt),
       pat_(&pattern),
-      own_(false)
+      del_(false)
   { }
   /// Construct a base abstract matcher from a regex pattern string and an input character sequence.
   PatternMatcher(
@@ -1800,7 +1808,7 @@ class PatternMatcher : public AbstractMatcher {
     :
       AbstractMatcher(input, opt),
       pat_(new Pattern(pattern)),
-      own_(true)
+      del_(true)
   { }
   /// Construct a base abstract matcher from a regex pattern string and an input character sequence.
   PatternMatcher(
@@ -1810,10 +1818,10 @@ class PatternMatcher : public AbstractMatcher {
     :
       AbstractMatcher(input, opt),
       pat_(new Pattern(pattern)),
-      own_(true)
+      del_(true)
   { }
   const Pattern *pat_; ///< points to the pattern object used by the matcher
-  bool           own_; ///< true if PatternMatcher::pat_ was allocated and should be deleted
+  bool           del_; ///< true if PatternMatcher::pat_ was allocated and should be deleted
 };
 
 /// A specialization of the pattern matcher class template for std::string, extends abstract matcher base class.
@@ -1826,17 +1834,17 @@ class PatternMatcher<std::string> : public AbstractMatcher {
     :
       AbstractMatcher(matcher.in, matcher.opt_),
       pat_(matcher.pat_ != NULL ? new Pattern(*matcher.pat_) : NULL),
-      own_(matcher.pat_ != NULL)
+      del_(matcher.pat_ != NULL)
   { }
   /// Delete matcher, deletes pattern when owned
   virtual ~PatternMatcher()
   {
     DBGLOG("PatternMatcher::~PatternMatcher()");
-    if (own_ && pat_ != NULL)
+    if (del_ && pat_ != NULL)
       delete pat_;
   }
   /// Assign a matcher, the underlying pattern string is shared (not deep copied).
-  PatternMatcher& operator=(const PatternMatcher& matcher) ///< matcher with pattern to use (pattern may be shared)
+  virtual PatternMatcher& operator=(const PatternMatcher& matcher) ///< matcher with pattern to use (pattern may be shared)
   {
     scan.init(this, Const::SCAN);
     find.init(this, Const::FIND);
@@ -1844,9 +1852,7 @@ class PatternMatcher<std::string> : public AbstractMatcher {
     in = matcher.in;
     reset();
     opt_ = matcher.opt_;
-    pat_ = matcher.pat_,
-    own_ = false;
-    return *this;
+    return pattern(matcher.pat_);
   }
   /// Set the pattern to use with this matcher as a shared pointer to another matcher pattern.
   virtual PatternMatcher& pattern(const PatternMatcher& matcher) ///< the other matcher
@@ -1862,10 +1868,10 @@ class PatternMatcher<std::string> : public AbstractMatcher {
     DBGLOG("Patternatcher::pattern()");
     if (pat_ != pattern)
     {
-      if (own_ && pat_ != NULL)
+      if (del_ && pat_ != NULL)
         delete pat_;
       pat_ = pattern;
-      own_ = false;
+      del_ = false;
     }
     return *this;
   }
@@ -1874,10 +1880,10 @@ class PatternMatcher<std::string> : public AbstractMatcher {
     /// @returns this matcher
   {
     DBGLOG("Patternatcher::pattern(\"%s\")", pattern);
-    if (own_ && pat_ != NULL)
+    if (del_ && pat_ != NULL)
       delete pat_;
     pat_ = new Pattern(pattern);
-    own_ = true;
+    del_ = true;
     return *this;
   }
   /// Set the pattern from a regex string to use with this matcher.
@@ -1885,26 +1891,26 @@ class PatternMatcher<std::string> : public AbstractMatcher {
     /// @returns this matcher
   {
     DBGLOG("Patternatcher::pattern(\"%s\")", pattern.c_str());
-    if (own_ && pat_ != NULL)
+    if (del_ && pat_ != NULL)
       delete pat_;
     pat_ = new Pattern(pattern);
-    own_ = true;
+    del_ = true;
     return *this;
   }
   /// Returns true if this matcher has a pattern.
-  bool has_pattern() const
+  inline bool has_pattern() const
     /// @returns true if this matcher has a pattern
   {
     return pat_ != NULL;
   }
   /// Returns true if this matcher has its own pattern not received from another matcher (responsible to delete).
-  bool own_pattern() const
+  inline bool own_pattern() const
     /// @returns true if this matcher has its own pattern
   {
-    return own_ && pat_ != NULL;
+    return del_ && pat_ != NULL;
   }
   /// Returns a reference to the pattern string associated with this matcher.
-  const Pattern& pattern() const
+  virtual const Pattern& pattern() const
     /// @returns reference to pattern string
   {
     ASSERT(pat_ != NULL);
@@ -1919,7 +1925,7 @@ class PatternMatcher<std::string> : public AbstractMatcher {
     :
       AbstractMatcher(input, opt),
       pat_(pattern),
-      own_(false)
+      del_(false)
   { }
   /// Construct a base abstract matcher from a regex pattern string and an input character sequence.
   PatternMatcher(
@@ -1929,7 +1935,7 @@ class PatternMatcher<std::string> : public AbstractMatcher {
     :
       AbstractMatcher(input, opt),
       pat_(new Pattern(pattern)),
-      own_(true)
+      del_(true)
   { }
   /// Construct a base abstract matcher from a regex pattern string and an input character sequence.
   PatternMatcher(
@@ -1939,10 +1945,10 @@ class PatternMatcher<std::string> : public AbstractMatcher {
     :
       AbstractMatcher(input, opt),
       pat_(new Pattern(pattern)),
-      own_(true)
+      del_(true)
   { }
   const Pattern *pat_; ///< points to the pattern string used by the matcher
-  bool           own_; ///< true if PatternMatcher::pat_ was allocated and should be deleted
+  bool           del_; ///< true if PatternMatcher::pat_ was allocated and should be deleted
 };
 
 } // namespace reflex

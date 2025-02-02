@@ -49,9 +49,9 @@ class StdMatcher : public PatternMatcher<std::regex> {
  public:
   /// Convert a regex to an acceptable form, given the specified regex library signature `"[decls:]escapes[?+]"`, see reflex::convert.
   template<typename T>
-  static std::string convert(T regex, convert_flag_type flags = convert_flag::none)
+  static std::string convert(T regex, convert_flag_type flags = convert_flag::none, bool *multiline = NULL)
   {
-    return reflex::convert(regex, "!=:bcdfnrstvwxBDSW?", flags);
+    return reflex::convert(regex, "!=:bcdfnrstvwxBDSW?", flags, multiline);
   }
   /// Default constructor.
   StdMatcher() : PatternMatcher<std::regex>()
@@ -88,6 +88,7 @@ class StdMatcher : public PatternMatcher<std::regex> {
       PatternMatcher<std::regex>(matcher),
       flg_(matcher.flg_)
   { }
+  using PatternMatcher::operator=;
   /// Assign a matcher.
   StdMatcher& operator=(const StdMatcher& matcher) ///< matcher to copy
   {
@@ -451,9 +452,9 @@ class StdPosixMatcher : public StdMatcher {
  public:
   /// Convert a regex to an acceptable form, given the specified regex library signature `"[decls:]escapes[?+]"`, see reflex::convert.
   template<typename T>
-  static std::string convert(T regex, convert_flag_type flags = convert_flag::none)
+  static std::string convert(T regex, convert_flag_type flags = convert_flag::none, bool *multiline = NULL)
   {
-    return reflex::convert(regex, "fnrtv", flags);
+    return reflex::convert(regex, "fnrtv", flags, multiline);
   }
   /// Default constructor.
   StdPosixMatcher() : StdMatcher()

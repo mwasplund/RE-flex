@@ -38,6 +38,7 @@
 #define REFLEX_UTF8_H
 
 #ifndef SOUP_BUILD
+#include <cstddef>
 #include <cstring>
 #include <string>
 #endif

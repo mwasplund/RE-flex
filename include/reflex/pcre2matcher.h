@@ -48,9 +48,9 @@ class PCRE2Matcher : public PatternMatcher<std::string> {
  public:
   /// Convert a regex to an acceptable form, given the specified regex library signature `"[decls:]escapes[?+]"`, see reflex::convert.
   template<typename T>
-  static std::string convert(T regex, convert_flag_type flags = convert_flag::none)
+  static std::string convert(T regex, convert_flag_type flags = convert_flag::none, bool *multiline = NULL)
   {
-    return reflex::convert(regex, "imPRsx!#<>=&|'(0123456789*:abcdefghnrstvwxzABCDGHKNQRSVWXZ0123456789?+", flags);
+    return reflex::convert(regex, "iJmnPRsUx!#<>=&|'(0123456789*:abcdefghnrstvwxzABCDGHKNQRSVWXZ0123456789?+", flags, multiline);
   }
   /// Default constructor.
   PCRE2Matcher()
@@ -133,8 +133,9 @@ class PCRE2Matcher : public PatternMatcher<std::string> {
     if (opc_ != NULL)
       pcre2_code_free(opc_);
   }
+  using PatternMatcher::operator=;
   /// Assign a matcher.
-  PCRE2Matcher& operator=(const PCRE2Matcher& matcher) ///< matcher to copy
+  virtual PCRE2Matcher& operator=(const PCRE2Matcher& matcher) ///< matcher to copy
   {
     PatternMatcher<std::string>::operator=(matcher);
     pattern(matcher);
@@ -292,6 +293,10 @@ class PCRE2Matcher : public PatternMatcher<std::string> {
     int err;
     PCRE2_SIZE pos;
     ASSERT(pat_ != NULL);
+#ifdef PCRE2_MATCH_INVALID_UTF
+    if (cop_ & PCRE2_UTF)
+      cop_ |= PCRE2_MATCH_INVALID_UTF; // recommended in the PCRE2 docs when using UTF-8
+#endif
     opc_ = pcre2_compile(reinterpret_cast<PCRE2_SPTR>(pat_->c_str()), static_cast<PCRE2_SIZE>(pat_->size()), cop_, &err, &pos, NULL);
     if (opc_ == NULL)
     {
@@ -364,7 +369,12 @@ class PCRE2Matcher : public PatternMatcher<std::string> {
     /// @returns true when PCRE2 match found
   {
     if (pos_ == end_ && !eof_)
-      (void)peek_more();
+    {
+      if (method == Const::FIND)
+        set_current_and_peek_more(end_);
+      else
+        (void)peek_more();
+    }
     uint32_t flg = flg_;
     if (!eof_)
       flg |= PCRE2_PARTIAL_HARD;
@@ -378,9 +388,11 @@ class PCRE2Matcher : public PatternMatcher<std::string> {
     {
       DBGLOGN("pcre2_match() pos = %zu end = %zu", pos_, end_);
       int rc;
+#ifdef PCRE2_MATCH_INVALID_UTF
       if (jit_ && !(flg & PCRE2_ANCHORED))
         rc = pcre2_jit_match(opc_, reinterpret_cast<PCRE2_SPTR>(buf_), end_, pos_, flg, dat_, ctx_);
       else
+#endif
         rc = pcre2_match(opc_, reinterpret_cast<PCRE2_SPTR>(buf_), end_, pos_, flg, dat_, ctx_);
       if (rc > 0)
       {
@@ -452,9 +464,9 @@ class PCRE2UTFMatcher : public PCRE2Matcher {
  public:
   /// Convert a regex to an acceptable form, given the specified regex library signature `"[decls:]escapes[?+]"`, see reflex::convert.
   template<typename T>
-  static std::string convert(T regex, convert_flag_type flags = convert_flag::none)
+  static std::string convert(T regex, convert_flag_type flags = convert_flag::none, bool *multiline = NULL)
   {
-    return reflex::convert(regex, "imPRsx!#<>=&|'(0123456789*:abcdefghknprstvwxzABCDGHKNPQRSVWXZ0123456789?+", flags);
+    return reflex::convert(regex, "iJmnPRsUx!#<>=&|'(0123456789*:abcdefghknprstvwxzABCDGHKNPQRSVWXZ0123456789?+", flags, multiline);
   }
   /// Default constructor.
   PCRE2UTFMatcher() : PCRE2Matcher()
@@ -477,6 +489,7 @@ class PCRE2UTFMatcher : public PCRE2Matcher {
     :
       PCRE2Matcher(pattern, input, opt, PCRE2_UTF | PCRE2_UCP)
   { }
+  using PCRE2Matcher::operator=;
 };
 
 } // namespace reflex

@@ -92,6 +92,6 @@ const int * range(const char *s)
   return NULL;
 }
 
-}
+} // namespace Posix
 
-}
+} // namespace reflex

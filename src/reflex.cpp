@@ -30,7 +30,7 @@
 @file      reflex.cpp
 @brief     RE/flex scanner generator replacement for Flex/Lex
 @author    Robert van Engelen - engelen@genivia.com
-@copyright (c) 2015-2019, Robert van Engelen, Genivia Inc. All rights reserved.
+@copyright (c) 2016-2023, Robert van Engelen, Genivia Inc. All rights reserved.
 @copyright (c) BSD-3 License - see LICENSE.txt
 */
 
@@ -110,6 +110,7 @@ static const char *options_table[] = {
   "nowarn",
   "noyylineno",
   "noyymore",
+  "noyypanic",
   "noyywrap",
   "outfile",
   "params",
@@ -136,6 +137,7 @@ static const char *options_table[] = {
   "yyclass",
   "yylineno",
   "yymore",
+  "yypanic",
   "yywrap",
   "YYLTYPE",
   "YYSTYPE",
@@ -272,10 +274,10 @@ static const Reflex::Library library_table[] = {
 ////////////////////////////////////////////////////////////////////////////////
 
 /// Convert to lower case
-inline int lower(int c)
+inline char char_tolower(char c)
   /// @returns lower case char
 {
-  return std::isalpha(c) ? (c | 0x20) : c;
+  return static_cast<char>(std::isalpha(static_cast<unsigned char>(c)) ? (c | 0x20) : c);
 }
 
 /// Add file extension if not present, modifies the string argument and returns a copy
@@ -379,13 +381,13 @@ void Reflex::init(int argc, char **argv)
               size_t pos;
               while ((pos = name.find('-')) != std::string::npos)
                 name[pos] = '_';
-              StringMap::iterator i = options.find(name);
-              if (i == options.end())
+              StringMap::iterator it = options.find(name);
+              if (it == options.end())
                 help("unknown option --", arg);
               if (val != NULL)
-                i->second = val + 1;
+                it->second = val + 1;
               else
-                i->second = "true";
+                it->second = "true";
             }
             is_grouped = false;
             break;
@@ -516,6 +518,14 @@ void Reflex::init(int argc, char **argv)
     }
   }
 
+#if defined(OS_WIN) && !defined(__CYGWIN__)
+  if (infile.empty() && _isatty(0) != 0)
+    abort("no input file specified");
+#else
+  if (infile.empty() && isatty(0) != 0)
+    abort("no input file specified");
+#endif
+
   set_library();
 }
 
@@ -577,13 +587,13 @@ void Reflex::help(const char *message, const char *arg)
                 specify output FILE instead of lex.yy.cpp\n\
         -t, --stdout\n\
                 write scanner on stdout instead of lex.yy.cpp\n\
-        --graphs-file[=FILE]\n\
+        --graphs-file[=FILE[.gv]]\n\
                 write the scanner's DFA in Graphviz format to FILE.gv\n\
         --header-file[=FILE]\n\
-                write a C++ header FILE.h in addition to the scanner\n\
-        --regexp-file[=FILE]\n\
+                write a C++ header FILE in addition to the scanner\n\
+        --regexp-file[=FILE[.txt]]\n\
                 write the scanner's regular expression patterns to FILE.txt\n\
-        --tables-file[=FILE]\n\
+        --tables-file[=FILE[.cpp]]\n\
                 write the scanner's FSM opcode tables or FSM code to FILE.cpp\n\
 \n\
     Generated code:\n\
@@ -625,10 +635,12 @@ void Reflex::help(const char *message, const char *arg)
                 NOTE: adds functions only, reflex scanners are always reentrant\n\
         -y, --yy\n\
                 same as --flex and --bison, also generate global yyin, yyout\n\
+        --yypanic\n\
+                call yypanic() when scanner jams, requires --flex --nodefault\n\
         --noyywrap\n\
-                do not call global yywrap() on EOF, requires option --flex\n\
+                do not call yywrap() on EOF, requires option --flex\n\
         --exception=VALUE\n\
-                use exception VALUE to throw in the default rule of the scanner\n\
+                use exception VALUE to throw as the default rule\n\
         --token-type=NAME\n\
                 use NAME as the return type of lex() and yylex() instead of int\n\
 \n\
@@ -638,7 +650,7 @@ void Reflex::help(const char *message, const char *arg)
         -p, --perf-report\n\
                 scanner reports detailed performance statistics to stderr\n\
         -s, --nodefault\n\
-                disable the default rule in scanner that echoes unmatched text\n\
+                disable the default rule that echoes unmatched text\n\
         -v, --verbose\n\
                 report summary of scanner statistics to stdout\n\
         -w, --nowarn\n\
@@ -652,7 +664,7 @@ void Reflex::help(const char *message, const char *arg)
         -V, --version\n\
                 report reflex version and exit\n\
 \n\
-    Lex/Flex-like options that are enabled by default or have no effect:\n\
+    Lex/Flex options that are enabled by default or have no effect:\n\
         --c++                  default\n\
         --lex-compat           n/a\n\
         --never-interactive    default\n\
@@ -766,7 +778,7 @@ bool Reflex::get_line()
       line.push_back(c);
   }
   linelen = line.length();
-  while (linelen > 0 && std::isspace(line.at(linelen - 1)))
+  while (linelen > 0 && std::isspace(static_cast<unsigned char>(line.at(linelen - 1))))
     --linelen;
   line.resize(linelen);
   if (in.eof() && line.empty())
@@ -816,7 +828,7 @@ bool Reflex::skip_comment(size_t& pos)
 /// Match case-insensitive string s while ignoring the rest of the line, return true if OK
 bool Reflex::is(const char *s)
 {
-  for (size_t pos = 0; pos < linelen && *s != '\0' && lower(line.at(pos)) == *s; ++pos, ++s)
+  for (size_t pos = 0; pos < linelen && *s != '\0' && char_tolower(line.at(pos)) == *s; ++pos, ++s)
     continue;
   return *s == '\0';
 }
@@ -825,9 +837,9 @@ bool Reflex::is(const char *s)
 bool Reflex::ins(const char *s)
 {
   size_t pos = 0;
-  while (pos < linelen && std::isspace(line.at(pos)))
+  while (pos < linelen && std::isspace(static_cast<unsigned char>(line.at(pos))))
     ++pos;
-  while (pos < linelen && *s != '\0' && lower(line.at(pos)) == *s)
+  while (pos < linelen && *s != '\0' && char_tolower(line.at(pos)) == *s)
   {
     ++pos;
     ++s;
@@ -840,17 +852,17 @@ bool Reflex::br(size_t pos, const char *s)
 {
   if (s != NULL)
   {
-    if (pos >= linelen || *s == '\0' || lower(line.at(pos)) != *s++)
+    if (pos >= linelen || *s == '\0' || char_tolower(line.at(pos)) != *s++)
       return false;
-    while (++pos < linelen && *s != '\0' && lower(line.at(pos)) == *s++)
+    while (++pos < linelen && *s != '\0' && char_tolower(line.at(pos)) == *s++)
       continue;
   }
-  while (pos < linelen && std::isspace(line.at(pos)))
+  while (pos < linelen && std::isspace(static_cast<unsigned char>(line.at(pos))))
     ++pos;
   if (pos >= linelen || line.at(pos) != '{')
     return false;
   ++pos;
-  while (pos < linelen && std::isspace(line.at(pos)))
+  while (pos < linelen && std::isspace(static_cast<unsigned char>(line.at(pos))))
     ++pos;
   if (pos >= linelen)
     return true;
@@ -860,9 +872,9 @@ bool Reflex::br(size_t pos, const char *s)
 /// Advance pos to match case-insensitive initial part of the string s followed by white space, return true if OK
 bool Reflex::as(size_t& pos, const char *s)
 {
-  if (pos >= linelen || *s == '\0' || lower(line.at(pos)) != *s++)
+  if (pos >= linelen || *s == '\0' || char_tolower(line.at(pos)) != *s++)
     return false;
-  while (++pos < linelen && *s != '\0' && lower(line.at(pos)) == *s++)
+  while (++pos < linelen && *s != '\0' && char_tolower(line.at(pos)) == *s++)
     continue;
   return ws(pos);
 }
@@ -870,9 +882,9 @@ bool Reflex::as(size_t& pos, const char *s)
 /// Advance pos over whitespace, returns true if whitespace was found
 bool Reflex::ws(size_t& pos)
 {
-  if (pos >= linelen || (pos > 0 && !std::isspace(line.at(pos))))
+  if (pos >= linelen || (pos > 0 && !std::isspace(static_cast<unsigned char>(line.at(pos)))))
     return false;
-  while (pos < linelen && std::isspace(line.at(pos)))
+  while (pos < linelen && std::isspace(static_cast<unsigned char>(line.at(pos))))
     ++pos;
   return true;
 }
@@ -891,7 +903,7 @@ bool Reflex::eq(size_t& pos)
 /// Advance pos to end of line while skipping whitespace, return true if end of line
 bool Reflex::nl(size_t& pos)
 {
-  while (pos < linelen && std::isspace(line.at(pos)))
+  while (pos < linelen && std::isspace(static_cast<unsigned char>(line.at(pos))))
     ++pos;
   return pos >= linelen;
 }
@@ -899,7 +911,7 @@ bool Reflex::nl(size_t& pos)
 /// Check if current line starts a block of code or a comment
 bool Reflex::is_code()
 {
-  return linelen > 0 && ((std::isspace(line.at(0)) && options["freespace"].empty()) || is("%{") || is("//") || is("/*"));
+  return linelen > 0 && ((std::isspace(static_cast<unsigned char>(line.at(0))) && options["freespace"].empty()) || is("%{") || is("//") || is("/*"));
 }
 
 /// Check if current line starts a block of %top code
@@ -929,12 +941,12 @@ bool Reflex::is_begin_code()
 /// Advance pos over name (letters, digits, ., -, _ or any non-ASCII character > U+007F), return name
 std::string Reflex::get_name(size_t& pos)
 {
-  if (pos >= linelen || (!std::isalnum(line.at(pos)) && line.at(pos) != '_' && (line.at(pos) & 0x80) != 0x80))
+  if (pos >= linelen || (!std::isalnum(static_cast<unsigned char>(line.at(pos))) && line.at(pos) != '_' && (line.at(pos) & 0x80) != 0x80))
     return "";
   size_t loc = pos++;
   while (pos < linelen)
   {
-    if (!std::isalnum(line.at(pos)) && line.at(pos) != '_' && line.at(pos) != '-' && line.at(pos) != '.' && (line.at(pos) & 0x80) != 0x80)
+    if (!std::isalnum(static_cast<unsigned char>(line.at(pos))) && line.at(pos) != '_' && line.at(pos) != '-' && line.at(pos) != '.' && (line.at(pos) & 0x80) != 0x80)
       break;
     ++pos;
   }
@@ -949,7 +961,7 @@ std::string Reflex::get_namespace(size_t& pos)
   {
     if (line.at(pos) == ':' && pos + 1 < linelen && line.at(pos + 1) == ':') // parse ::
       ++pos;
-    else if (!std::isalnum(line.at(pos)) && line.at(pos) != '_' && line.at(pos) != '-' && line.at(pos) != '.' && (line.at(pos) & 0x80) != 0x80)
+    else if (!std::isalnum(static_cast<unsigned char>(line.at(pos))) && line.at(pos) != '_' && line.at(pos) != '-' && line.at(pos) != '.' && (line.at(pos) & 0x80) != 0x80)
       break;
     ++pos;
   }
@@ -959,14 +971,14 @@ std::string Reflex::get_namespace(size_t& pos)
 /// Advance pos over option name (letters, digits, +/hyphen/underscore), return name
 std::string Reflex::get_option(size_t& pos)
 {
-  if (pos >= linelen || !std::isalnum(line.at(pos)))
+  if (pos >= linelen || !std::isalnum(static_cast<unsigned char>(line.at(pos))))
     return "";
   size_t loc = pos++;
   while (pos < linelen)
   {
     if (line.at(pos) == '-' || line.at(pos) == '+') // normalize - and + to _
       line[pos] = '_';
-    else if (!std::isalnum(line.at(pos)) && line.at(pos) != '_')
+    else if (!std::isalnum(static_cast<unsigned char>(line.at(pos))) && line.at(pos) != '_')
       break;
     ++pos;
   }
@@ -983,7 +995,7 @@ std::string Reflex::get_start(size_t& pos)
   {
     if (line.at(pos) == '-') // normalize - to _
       line[pos] = '_';
-    else if (!std::isalnum(line.at(pos)) && line.at(pos) != '_' && (line.at(pos) & 0x80) != 0x80)
+    else if (!std::isalnum(static_cast<unsigned char>(line.at(pos))) && line.at(pos) != '_' && (line.at(pos) & 0x80) != 0x80)
       break;
     ++pos;
   }
@@ -996,13 +1008,27 @@ std::string Reflex::get_string(size_t& pos)
   if (pos >= linelen || line.at(pos) != '"')
     return "";
   std::string string;
-  while (++pos < linelen && line.at(pos) != '"')
-  {
-    if (line.at(pos) == '\\' && (line.at(pos + 1) == '"' || line.at(pos + 1) == '\\'))
-      ++pos;
-    string.push_back(line.at(pos));
-  }
   ++pos;
+  while (pos < linelen && line.at(pos) != '"')
+  {
+    if (line.at(pos) == '\\')
+    {
+      if (pos + 1 < linelen && (line.at(pos + 1) == '"' || line.at(pos + 1) == '\\'))
+      {
+        ++pos;
+      }
+      else if (pos + 1 == linelen)
+      {
+        if (!get_line())
+          error("EOF encountered at line continuation");
+        pos = 0;
+        continue;
+      }
+    }
+    string.push_back(line.at(pos++));
+  }
+  if (pos < linelen)
+    ++pos;
   return string;
 }
 
@@ -1021,7 +1047,7 @@ bool Reflex::get_pattern(size_t& pos, std::string& pattern, std::string& regex)
     if (fsp)
     {
       if (nsp < pos && (
-            (c == '{' && (pos + 1 == linelen || line.at(pos + 1) == '}' || std::isspace(line.at(pos + 1)))) ||
+            (c == '{' && (pos + 1 == linelen || line.at(pos + 1) == '}' || std::isspace(static_cast<unsigned char>(line.at(pos + 1))))) ||
             (c == '|' && pos + 1 == linelen) ||
             (c == '/' && pos + 1 < linelen && (line.at(pos + 1) == '/' || line.at(pos + 1) == '*'))))
       {
@@ -1029,7 +1055,7 @@ bool Reflex::get_pattern(size_t& pos, std::string& pattern, std::string& regex)
         break;
       }
     }
-    else if (std::isspace(c))
+    else if (std::isspace(static_cast<unsigned char>(c)))
     {
       break;
     }
@@ -1108,7 +1134,7 @@ bool Reflex::get_pattern(size_t& pos, std::string& pattern, std::string& regex)
         ++pos;
       }
     }
-    if (fsp && !std::isspace(c))
+    if (fsp && !std::isspace(static_cast<unsigned char>(c)))
       nsp = pos;
   }
   pattern.append(line.substr(loc, pos - loc));
@@ -1131,7 +1157,7 @@ bool Reflex::get_pattern(size_t& pos, std::string& pattern, std::string& regex)
       flags |= reflex::convert_flag::permissive;
     try
     {
-      regex = reflex::convert(pattern, library->signature, flags, &definitions); 
+      regex = reflex::convert(pattern, library->signature, flags, NULL, &definitions); 
     }
     catch (reflex::regex_error& e)
     {
@@ -1213,7 +1239,7 @@ std::string Reflex::get_code(size_t& pos)
         }
         else
         {
-          if (blk == 0 && lev == 0 && linelen > 0 && (!std::isspace(line.at(0)) || !options["freespace"].empty()))
+          if (blk == 0 && lev == 0 && linelen > 0 && (!std::isspace(static_cast<unsigned char>(line.at(0))) || !options["freespace"].empty()))
             return code;
           code.append("\n").append(line);
         }
@@ -1286,8 +1312,8 @@ std::string Reflex::upper_name(const std::string& s)
   std::string t;
   for (size_t i = 0; i < s.size(); ++i)
   {
-    if (std::isalnum(s.at(i)))
-      t.push_back(std::toupper(s.at(i)));
+    if (std::isalnum(static_cast<unsigned char>(s.at(i))))
+      t.push_back(static_cast<char>(std::toupper(static_cast<unsigned char>(s.at(i)))));
     else
       t.push_back('_');
   }
@@ -1311,11 +1337,11 @@ std::string Reflex::param_args(const std::string& params)
     if (i <= from)
       i = to;
     while (--i > from)
-      if (!std::isspace(params.at(i)))
+      if (!std::isspace(static_cast<unsigned char>(params.at(i))))
         break;
     size_t j = i++;
     while (--i > from)
-      if (!std::isalnum(params.at(i)) && params.at(i) != '_')
+      if (!std::isalnum(static_cast<unsigned char>(params.at(i))) && params.at(i) != '_')
         break;
     if (!args.empty())
       args.append(", ");
@@ -1329,7 +1355,7 @@ std::string Reflex::param_args(const std::string& params)
 bool Reflex::get_starts(size_t& pos, Starts& starts)
 {
   pos = 0;
-  if (linelen > 1 && line.at(0) == '<' && (std::isalpha(line.at(1)) || line.at(1) == '_' || line.at(1) == '*' || (line.at(1) & 0x80) == 0x80 || line.at(1) == '^') && line.find('>') != std::string::npos)
+  if (linelen > 1 && line.at(0) == '<' && (std::isalpha(static_cast<unsigned char>(line.at(1))) || line.at(1) == '_' || line.at(1) == '*' || (line.at(1) & 0x80) == 0x80 || line.at(1) == '^') && line.find('>') != std::string::npos)
   {
     do
     {
@@ -1708,23 +1734,19 @@ void Reflex::parse_section_2()
   for (Start start = 0; start < conditions.size(); ++start)
   {
     std::string& pattern = patterns[start];
-    pattern.assign("(?m");
+    pattern.assign("(?");
+    if (reflex::supports_modifier(library->signature, 'm'))
+      pattern.push_back('m');
     if (!options["case_insensitive"].empty())
       pattern.push_back('i');
     if (!options["dotall"].empty())
       pattern.push_back('s');
     if (!options["freespace"].empty())
       pattern.push_back('x');
-    pattern.append(")%");
-    try
-    {
-      pattern.assign(reflex::convert(pattern, library->signature, reflex::convert_flag::none));
-    }
-    catch (reflex::regex_error& e)
-    {
-      error("malformed regular expression\n", e.what());
-    }
-    pattern.resize(pattern.size() - 1); // remove dummy % from (?m...)%
+    if (pattern.size() > 2)
+      pattern.push_back(')');
+    else
+      pattern.clear();
     const char *sep = "";
     for (Rules::const_iterator rule = rules[start].begin(); rule != rules[start].end(); ++rule)
     {
@@ -1764,6 +1786,12 @@ void Reflex::write()
     else
       options["header_file"] = std::string("lex.").append(options["prefix"]).append(".h");
   }
+  if (!options["graphs_file"].empty() && options["graphs_file"] != "true")
+    file_ext(options["graphs_file"], "gv");
+  if (!options["regexp_file"].empty() && options["regexp_file"] != "true")
+    file_ext(options["regexp_file"], "txt");
+  if (!options["tables_file"].empty() && options["tables_file"] != "true")
+    file_ext(options["tables_file"], "cpp");
   if (!options["bison_complete"].empty())
     options["bison_cc"] = "true";
   if (!options["namespace"].empty())
@@ -1783,6 +1811,8 @@ void Reflex::write()
   if (!options["bison_complete"].empty() && options["token_eof"].empty())
     options["token_eof"] = options["token_type"] + (options["bison_locations"].empty() ? "(0)" : "(0, location())");
   std::ofstream ofs;
+  if (options["outfile"] == "-")
+    options["stdout"] = "true";
   if (options["stdout"].empty())
   {
     if (options["outfile"].empty())
@@ -1797,223 +1827,36 @@ void Reflex::write()
       abort("cannot open file ", options["outfile"].c_str());
     out = &ofs;
   }
-  std::string prefix = options["prefix"];
-  std::string token_type = options["token_type"].empty() ? "int" : options["token_type"];
-  std::string yyltype = options["YYLTYPE"].empty() ? "YYLTYPE" : options["YYLTYPE"];
-  std::string yystype = options["YYSTYPE"].empty() ? "YYSTYPE" : options["YYSTYPE"];
-  std::string params = options["params"].empty() ? "void" : options["params"];
-  std::string comma_params = options["params"].empty() ? "" : ", " + params;
-  std::string args = options["params"].empty() ? "" : param_args(params);
-  std::string comma_args = options["params"].empty() ? "" : ", " + args;
+  else
+  {
+    options["outfile"] = "<stdout>";
+  }
   *out << "// " << options["outfile"] << " generated by reflex " REFLEX_VERSION " from " << infile << "\n\n";
   write_prelude();
   write_section_top();
   write_defines();
-  write_class();
+  if (!options["header_file"].empty())
+  {
+    write_banner("LEXER CLASS INCLUDE");
+    *out << "#include \"" << options["header_file"] << "\"\n";
+  }
+  else
+  {
+    write_class();
+  }
   write_section_1();
   write_lexer();
   write_main();
   write_section_3();
   if (!out->good())
     abort("error in writing");
-  if (options["matcher"].empty() && (!options["full"].empty() || !options["fast"].empty()) && options["tables_file"].empty() && options["stdout"].empty())
+  if (options["matcher"].empty() && (!options["full"].empty() || !options["fast"].empty()) && options["tables_file"].empty())
     write_banner("TABLES");
   if (ofs.is_open())
     ofs.close();
-  stats();
-  if (!options["regexp_file"].empty())
-  {
-    std::ofstream ofs;
-    bool append = false;
-    for (Start start = 0; start < conditions.size(); ++start)
-    {
-      if (!append)
-      {
-        std::string filename;
-        if (options["regexp_file"] == "true")
-        {
-          filename = "reflex.";
-          filename.append(conditions[start]).append(".txt");
-        }
-        else
-        {
-          filename = file_ext(options["regexp_file"], "txt");
-          append = true;
-        }
-        if (filename.compare(0, 7, "stdout.") == 0)
-        {
-          out = &std::cout;
-        }
-        else
-        {
-          ofs.open(filename.c_str(), std::ofstream::out);
-          if (!ofs.is_open())
-            abort("cannot open file ", filename.c_str());
-          out = &ofs;
-        }
-      }
-      write_regex(NULL, patterns[start]);
-      *out << std::endl;
-      if (!ofs.good())
-        abort("error in writing");
-      if (!append && ofs.is_open())
-        ofs.close();
-    }
-    if (append && ofs.is_open())
-      ofs.close();
-  }
-  if (!options["header_file"].empty())
-  {
-    ofs.open(options["header_file"].c_str(), std::ofstream::out);
-    if (!ofs.is_open())
-      abort("cannot open file ", options["header_file"].c_str());
-    out = &ofs;
-    *out <<
-      "// " << options["header_file"] << " generated by reflex " REFLEX_VERSION " from " << infile << "\n\n" <<
-      "#ifndef " << (prefix == "yy" ? "" : prefix.c_str()) << "REFLEX_" << upper_name(options["header_file"]) << '\n' <<
-      "#define " << (prefix == "yy" ? "" : prefix.c_str()) << "REFLEX_" << upper_name(options["header_file"]) << '\n' <<
-      "#define " << prefix << "IN_HEADER 1\n";
-    write_prelude();
-    write_section_top();
-    if (options["bison_cc"].empty() && (!options["bison"].empty() || !options["reentrant"].empty() || !options["bison_bridge"].empty() || !options["bison_locations"].empty()))
-      *out << "\n#ifdef __cplusplus\n";
-    write_class();
-    if (!options["bison_cc"].empty())
-    {
-      write_banner("BISON C++");
-    }
-    else if (!options["reentrant"].empty() || !options["bison_bridge"].empty())
-    {
-      if (!options["bison_locations"].empty())
-        write_banner("BISON BRIDGE LOCATIONS");
-      else if (!options["bison_bridge"].empty())
-        write_banner("BISON BRIDGE");
-      else
-        write_banner("REENTRANT");
-      *out <<
-        "typedef void *yyscan_t;\n"
-        "typedef ";
-      if (!options["namespace"].empty())
-        write_namespace_scope();
-      if (!options["yyclass"].empty())
-        *out << options["yyclass"];
-      else if (!options["class"].empty())
-        *out << options["class"];
-      else
-        *out << options["lexer"];
-      *out <<
-        " yyscanner_t;\n"
-        "\n"
-        "#ifndef YY_EXTERN_C\n"
-        "#define YY_EXTERN_C\n"
-        "#endif\n"
-        "\n"
-        "#else // !__cplusplus\n"
-        "\n"
-        "typedef void *yyscan_t;\n"
-        "\n"
-        "#undef YY_EXTERN_C\n"
-        "#define YY_EXTERN_C\n"
-        "\n"
-        "#ifndef yy_size_t\n"
-        "#define yy_size_t size_t\n"
-        "#endif\n"
-        "\n";
-      if (!options["flex"].empty())
-      {
-        *out <<
-          "YY_EXTERN_C char *" << prefix << "get_text(yyscan_t);\n"
-          "YY_EXTERN_C yy_size_t " << prefix << "get_leng(yyscan_t);\n"
-          "YY_EXTERN_C int " << prefix << "get_lineno(yyscan_t);\n"
-          "YY_EXTERN_C void " << prefix << "set_lineno(int, yyscan_t);\n"
-          "YY_EXTERN_C FILE *" << prefix << "get_in(yyscan_t);\n"
-          "YY_EXTERN_C void " << prefix << "set_in(FILE*, yyscan_t);\n"
-          "YY_EXTERN_C int " << prefix << "get_debug(yyscan_t);\n"
-          "YY_EXTERN_C void " << prefix << "set_debug(int, yyscan_t);\n"
-          "YY_EXTERN_C " << (options["extra_type"].empty() ? "void*" : options["extra_type"].c_str()) << " " << prefix << "get_extra(yyscan_t);\n"
-          "YY_EXTERN_C void " << prefix << "set_extra(" << (options["extra_type"].empty() ? "void*" : options["extra_type"].c_str()) << ", yyscan_t);\n"
-          "\n";
-      }
-      *out <<
-        "#endif // __cplusplus\n"
-        "\n";
-      if (!options["bison_locations"].empty())
-        *out << "YY_EXTERN_C " << token_type << " yylex(" << yystype << "*, " << yyltype << "*, yyscan_t" << comma_params << ");\n";
-      else if (!options["bison_bridge"].empty())
-        *out << "YY_EXTERN_C " << token_type << " yylex(" << yystype << "*, yyscan_t" << comma_params << ");\n";
-      else
-        *out << "YY_EXTERN_C " << token_type << " yylex(yyscan_t" << comma_params << ");\n";
-      *out << "YY_EXTERN_C void yylex_init(yyscan_t*);\n";
-
-      if (!options["flex"].empty())
-        *out << "YY_EXTERN_C void yylex_init_extra(" << (options["extra_type"].empty() ? "void*" : options["extra_type"].c_str()) << ", yyscan_t*);\n";
-
-      *out << "YY_EXTERN_C void yylex_destroy(yyscan_t);\n";
-    }
-    else if (!options["bison"].empty() || !options["bison_locations"].empty())
-    {
-      if (!options["bison_locations"].empty())
-        write_banner("BISON LOCATIONS");
-      else
-        write_banner("BISON");
-      *out <<
-        "extern ";
-      if (!options["namespace"].empty())
-        write_namespace_scope();
-      if (!options["yyclass"].empty())
-        *out << options["yyclass"];
-      else if (!options["class"].empty())
-        *out << options["class"];
-      else
-        *out << options["lexer"];
-      *out <<
-        " YY_SCANNER;\n"
-        "\n"
-        "#ifndef YY_EXTERN_C\n"
-        "#define YY_EXTERN_C\n"
-        "#endif\n"
-        "\n"
-        "#else // !__cplusplus\n"
-        "\n"
-        "#undef YY_EXTERN_C\n"
-        "#define YY_EXTERN_C\n"
-        "\n"
-        "#endif // __cplusplus\n"
-        "\n";
-      if (!options["flex"].empty())
-      {
-        *out <<
-          "#ifndef yy_size_t\n"
-          "#define yy_size_t size_t\n"
-          "#endif\n"
-          "\n";
-        if (!options["yy"].empty())
-          *out <<
-            "extern FILE *" << prefix << "in;\n"
-            "extern FILE *" << prefix << "out;\n";
-        *out <<
-          "extern char *" << prefix << "text;\n"
-          "extern yy_size_t " << prefix << "leng;\n"
-          "extern int " << prefix << "lineno;\n"
-          "\n";
-        if (!options["bison_locations"].empty())
-          *out << "YY_EXTERN_C " << token_type << " " << prefix << "lex(" << yystype << "*, " << yyltype << "*" << comma_params << ");\n";
-        else
-          *out << "YY_EXTERN_C " << token_type << " " << prefix << "lex(" << params << ");\n";
-      }
-      else
-      {
-        if (!options["bison_locations"].empty())
-          *out << "YY_EXTERN_C " << token_type << " yylex(" << yystype << "*, " << yyltype << "*" << comma_params << ");\n";
-        else
-          *out << "YY_EXTERN_C " << token_type << " yylex(" << params << ");\n";
-      }
-    }
-    *out << "\n#endif\n";
-    if (!out->good())
-      abort("error in writing");
-    ofs.close();
-  }
+  write_final();
+  write_regexp_file();
+  write_header_file();
 }
 
 /// Write a banner in lex.yy.cpp
@@ -2337,10 +2180,10 @@ void Reflex::write_class()
           "    " << yyltype << " yylloc;\n"
           "    yylloc.begin.filename = &filename;\n"
           "    yylloc.begin.line = static_cast<unsigned int>(matcher().lineno());\n"
-          "    yylloc.begin.column = static_cast<unsigned int>(matcher().columno());\n"
+          "    yylloc.begin.column = static_cast<unsigned int>(matcher().columno() + 1);\n"
           "    yylloc.end.filename = &filename;\n"
           "    yylloc.end.line = static_cast<unsigned int>(matcher().lineno_end());\n"
-          "    yylloc.end.column = static_cast<unsigned int>(matcher().columno_end());\n"
+          "    yylloc.end.column = static_cast<unsigned int>(matcher().columno_end() + 2);\n"
           "    return yylloc;\n"
           "  }\n";
       *out <<
@@ -2553,10 +2396,13 @@ void Reflex::write_perf_report()
       for (Rules::const_iterator rule = rules[start].begin(); rule != rules[start].end(); ++rule)
         if (rule->regex != "<<EOF>>" && rule->code.line != "|")
           ++report;
-      *out <<
-        "  size_t perf_report_" << conditions[start] << "_rule[" << report << "];\n"
-        "  size_t perf_report_" << conditions[start] << "_size[" << report << "];\n"
-        "  float  perf_report_" << conditions[start] << "_time[" << report << "];\n";
+      if (report > 0)
+      {
+        *out <<
+          "  size_t perf_report_" << conditions[start] << "_rule[" << report << "];\n"
+          "  size_t perf_report_" << conditions[start] << "_size[" << report << "];\n"
+          "  float  perf_report_" << conditions[start] << "_time[" << report << "];\n";
+      }
       if (options["nodefault"].empty())
         *out <<
           "  size_t perf_report_" << conditions[start] << "_default;\n";
@@ -3030,8 +2876,37 @@ void Reflex::write_lexer()
           "        switch (matcher().find())\n";
       *out <<
         "        {\n"
-        "          case 0:\n"
-        "            return " << token_eof << ";\n";
+        "          case 0:\n";
+      bool has_eof = false;
+      for (Rules::const_iterator rule = rules[start].begin(); rule != rules[start].end(); ++rule)
+      {
+        if (rule->regex == "<<EOF>>")
+        {
+          if (!options["debug"].empty())
+            *out <<
+              "            if (debug()) std::cerr << \"--" <<
+              SGR("\\033[1;35m") << "EOF rule " << escape_bs(rule->code.file) << ":" << rule->code.lineno << SGR("\\033[0m") <<
+              " start(\" << start() << \")\\n\";\n";
+          write_code(rule->code);
+          has_eof = true;
+          break;
+        }
+      }
+      if (!has_eof && !options["debug"].empty())
+        *out <<
+          "            if (debug()) std::cerr << \"--" <<
+          SGR("\\033[1;35m") << "EOF" << SGR("\\033[0m") << " start(\" << start() << \")\\n\";\n";
+      if (!options["perf_report"].empty())
+        *out << "            perf_report();\n";
+      if (!has_eof)
+      {
+        if (!options["flex"].empty())
+          *out <<
+            "            yyterminate();\n";
+        else
+          *out <<
+            "            return " << token_eof << ";\n";
+      }
     }
     else
     {
@@ -3089,7 +2964,11 @@ void Reflex::write_lexer()
           "\\n\";\n";
       if (!options["nodefault"].empty())
       {
-        if (!options["flex"].empty())
+        if (!options["flex"].empty() && !options["yypanic"].empty() && options["noyypanic"].empty())
+          *out <<
+            "              yypanic(\"scanner jammed\");\n"
+            "              yyterminate();\n";
+        else if (!options["flex"].empty())
           *out <<
             "              LexerError(\"scanner jammed\");\n"
             "              yyterminate();\n";
@@ -3314,8 +3193,8 @@ void Reflex::undot_namespace(std::string& s)
   }
 }
 
-/// Display usage report
-void Reflex::stats()
+/// Finalize and display usage report
+void Reflex::write_final()
 {
   if (!options["verbose"].empty())
   {
@@ -3346,24 +3225,33 @@ void Reflex::stats()
   {
     for (Start start = 0; start < conditions.size(); ++start)
     {
+      std::string name = options["prefix"];
+      if (name == "yy")
+        name.clear();
+      name.append(conditions[start]);
       std::string option = "r";
-      option.append(";n=").append(conditions[start]);
+      option.append(";n=").append(name);
       if (!options["namespace"].empty())
         option.append(";z=").append(options["namespace"]);
       if (options["graphs_file"] == "true")
-        option.append(";f=reflex.").append(conditions[start]).append(".gv");
+        option.append(";f=reflex.").append(name).append(".gv");
       else if (!options["graphs_file"].empty())
-        option.append(";f=").append(start > 0 ? "+" : "").append(file_ext(options["graphs_file"], "gv"));
+        option.append(";f=").append(start > 0 ? "+" : "").append(options["graphs_file"]);
       if (!options["fast"].empty())
         option.append(";o");
       if (!options["find"].empty())
         option.append(";p");
       if (options["tables_file"] == "true")
-        option.append(";f=reflex.").append(conditions[start]).append(".cpp");
+        option.append(";f=reflex.").append(name).append(".cpp");
       else if (!options["tables_file"].empty())
-        option.append(";f=").append(start > 0 ? "+" : "").append(file_ext(options["tables_file"], "cpp"));
-      if ((!options["full"].empty() || !options["fast"].empty()) && options["tables_file"].empty() && options["stdout"].empty())
-        option.append(";f=+").append(options["outfile"]);      
+        option.append(";f=").append(start > 0 ? "+" : "").append(options["tables_file"]);
+      if ((!options["full"].empty() || !options["fast"].empty()) && options["tables_file"].empty())
+      {
+        if (options["stdout"].empty())
+          option.append(";f=+").append(options["outfile"]);      
+        else
+          option.append(";f=stdout.cpp");
+      }
       try
       {
         reflex::Pattern pattern(patterns[start], option);
@@ -3403,3 +3291,209 @@ void Reflex::stats()
   }
 }
 
+/// Save file with regex patterns when option --regexp-file is specified
+void Reflex::write_regexp_file()
+{
+  if (!options["regexp_file"].empty())
+  {
+    std::ofstream ofs;
+    bool append = false;
+    for (Start start = 0; start < conditions.size(); ++start)
+    {
+      if (!append)
+      {
+        std::string filename;
+        if (options["regexp_file"] == "true")
+        {
+          filename = "reflex.";
+          filename.append(conditions[start]).append(".txt");
+        }
+        else
+        {
+          filename = options["regexp_file"];
+          append = true;
+        }
+        if (filename.compare(0, 7, "stdout.") == 0)
+        {
+          out = &std::cout;
+        }
+        else
+        {
+          ofs.open(filename.c_str(), std::ofstream::out);
+          if (!ofs.is_open())
+            abort("cannot open file ", filename.c_str());
+          out = &ofs;
+        }
+      }
+      write_regex(NULL, patterns[start]);
+      *out << std::endl;
+      if (!ofs.good())
+        abort("error in writing");
+      if (!append && ofs.is_open())
+        ofs.close();
+    }
+    if (append && ofs.is_open())
+      ofs.close();
+  }
+}
+
+/// Save header file when option --header-file is specified
+void Reflex::write_header_file()
+{
+  if (!options["header_file"].empty())
+  {
+    std::string prefix = options["prefix"];
+    std::string token_type = options["token_type"].empty() ? "int" : options["token_type"];
+    std::string yyltype = options["YYLTYPE"].empty() ? "YYLTYPE" : options["YYLTYPE"];
+    std::string yystype = options["YYSTYPE"].empty() ? "YYSTYPE" : options["YYSTYPE"];
+    std::string params = options["params"].empty() ? "void" : options["params"];
+    std::string comma_params = options["params"].empty() ? "" : ", " + params;
+    std::ofstream ofs(options["header_file"].c_str(), std::ofstream::out);
+    if (!ofs.is_open())
+      abort("cannot open file ", options["header_file"].c_str());
+    out = &ofs;
+    *out <<
+      "// " << options["header_file"] << " generated by reflex " REFLEX_VERSION " from " << infile << "\n\n" <<
+      "#ifndef " << (prefix == "yy" ? "" : prefix.c_str()) << "REFLEX_" << upper_name(options["header_file"]) << '\n' <<
+      "#define " << (prefix == "yy" ? "" : prefix.c_str()) << "REFLEX_" << upper_name(options["header_file"]) << '\n' <<
+      "#define " << prefix << "IN_HEADER 1\n";
+    write_prelude();
+    write_section_top();
+    if (options["bison_cc"].empty() && (!options["bison"].empty() || !options["reentrant"].empty() || !options["bison_bridge"].empty() || !options["bison_locations"].empty()))
+      *out << "\n#ifdef __cplusplus\n";
+    write_class();
+    if (!options["bison_cc"].empty())
+    {
+      write_banner("BISON C++");
+    }
+    else if (!options["reentrant"].empty() || !options["bison_bridge"].empty())
+    {
+      if (!options["bison_locations"].empty())
+        write_banner("BISON BRIDGE LOCATIONS");
+      else if (!options["bison_bridge"].empty())
+        write_banner("BISON BRIDGE");
+      else
+        write_banner("REENTRANT");
+      *out <<
+        "typedef void *yyscan_t;\n"
+        "typedef ";
+      if (!options["namespace"].empty())
+        write_namespace_scope();
+      if (!options["yyclass"].empty())
+        *out << options["yyclass"];
+      else if (!options["class"].empty())
+        *out << options["class"];
+      else
+        *out << options["lexer"];
+      *out <<
+        " yyscanner_t;\n"
+        "\n"
+        "#ifndef YY_EXTERN_C\n"
+        "#define YY_EXTERN_C\n"
+        "#endif\n"
+        "\n"
+        "#else // !__cplusplus\n"
+        "\n"
+        "typedef void *yyscan_t;\n"
+        "\n"
+        "#undef YY_EXTERN_C\n"
+        "#define YY_EXTERN_C\n"
+        "\n"
+        "#ifndef yy_size_t\n"
+        "#define yy_size_t size_t\n"
+        "#endif\n"
+        "\n";
+      if (!options["flex"].empty())
+      {
+        *out <<
+          "YY_EXTERN_C char *" << prefix << "get_text(yyscan_t);\n"
+          "YY_EXTERN_C yy_size_t " << prefix << "get_leng(yyscan_t);\n"
+          "YY_EXTERN_C int " << prefix << "get_lineno(yyscan_t);\n"
+          "YY_EXTERN_C void " << prefix << "set_lineno(int, yyscan_t);\n"
+          "YY_EXTERN_C FILE *" << prefix << "get_in(yyscan_t);\n"
+          "YY_EXTERN_C void " << prefix << "set_in(FILE*, yyscan_t);\n"
+          "YY_EXTERN_C int " << prefix << "get_debug(yyscan_t);\n"
+          "YY_EXTERN_C void " << prefix << "set_debug(int, yyscan_t);\n"
+          "YY_EXTERN_C " << (options["extra_type"].empty() ? "void*" : options["extra_type"].c_str()) << " " << prefix << "get_extra(yyscan_t);\n"
+          "YY_EXTERN_C void " << prefix << "set_extra(" << (options["extra_type"].empty() ? "void*" : options["extra_type"].c_str()) << ", yyscan_t);\n"
+          "\n";
+      }
+      *out <<
+        "#endif // __cplusplus\n"
+        "\n";
+      if (!options["bison_locations"].empty())
+        *out << "YY_EXTERN_C " << token_type << " yylex(" << yystype << "*, " << yyltype << "*, yyscan_t" << comma_params << ");\n";
+      else if (!options["bison_bridge"].empty())
+        *out << "YY_EXTERN_C " << token_type << " yylex(" << yystype << "*, yyscan_t" << comma_params << ");\n";
+      else
+        *out << "YY_EXTERN_C " << token_type << " yylex(yyscan_t" << comma_params << ");\n";
+      *out << "YY_EXTERN_C void yylex_init(yyscan_t*);\n";
+      if (!options["flex"].empty())
+        *out << "YY_EXTERN_C void yylex_init_extra(" << (options["extra_type"].empty() ? "void*" : options["extra_type"].c_str()) << ", yyscan_t*);\n";
+      *out << "YY_EXTERN_C void yylex_destroy(yyscan_t);\n";
+    }
+    else if (!options["bison"].empty() || !options["bison_locations"].empty())
+    {
+      if (!options["bison_locations"].empty())
+        write_banner("BISON LOCATIONS");
+      else
+        write_banner("BISON");
+      *out <<
+        "extern ";
+      if (!options["namespace"].empty())
+        write_namespace_scope();
+      if (!options["yyclass"].empty())
+        *out << options["yyclass"];
+      else if (!options["class"].empty())
+        *out << options["class"];
+      else
+        *out << options["lexer"];
+      *out <<
+        " YY_SCANNER;\n"
+        "\n"
+        "#ifndef YY_EXTERN_C\n"
+        "#define YY_EXTERN_C\n"
+        "#endif\n"
+        "\n"
+        "#else // !__cplusplus\n"
+        "\n"
+        "#undef YY_EXTERN_C\n"
+        "#define YY_EXTERN_C\n"
+        "\n"
+        "#endif // __cplusplus\n"
+        "\n";
+      if (!options["flex"].empty())
+      {
+        *out <<
+          "#ifndef yy_size_t\n"
+          "#define yy_size_t size_t\n"
+          "#endif\n"
+          "\n";
+        if (!options["yy"].empty())
+          *out <<
+            "extern FILE *" << prefix << "in;\n"
+            "extern FILE *" << prefix << "out;\n";
+        *out <<
+          "extern char *" << prefix << "text;\n"
+          "extern yy_size_t " << prefix << "leng;\n"
+          "extern int " << prefix << "lineno;\n"
+          "\n";
+        if (!options["bison_locations"].empty())
+          *out << "YY_EXTERN_C " << token_type << " " << prefix << "lex(" << yystype << "*, " << yyltype << "*" << comma_params << ");\n";
+        else
+          *out << "YY_EXTERN_C " << token_type << " " << prefix << "lex(" << params << ");\n";
+      }
+      else
+      {
+        if (!options["bison_locations"].empty())
+          *out << "YY_EXTERN_C " << token_type << " yylex(" << yystype << "*, " << yyltype << "*" << comma_params << ");\n";
+        else
+          *out << "YY_EXTERN_C " << token_type << " yylex(" << params << ");\n";
+      }
+    }
+    *out << "\n#endif\n";
+    if (!out->good())
+      abort("error in writing");
+    ofs.close();
+  }
+}

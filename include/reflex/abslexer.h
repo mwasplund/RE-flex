@@ -135,7 +135,7 @@ class AbstractLexer {
   {
     in_ = input;
     if (has_matcher())
-      matcher().input(input); // reset and assign new input
+      matcher().input(in_); // reset and assign new input
     return *this;
   }
   /// Reset the matcher and start scanning from the given byte sequence.
@@ -280,19 +280,27 @@ class AbstractLexer {
   {
     out().write(matcher().begin(), matcher().size());
   }
-  /// Returns string with the text matched.
+  /// Returns 0-terminated pattern match as a char pointer, does not include matched \0s, this is a constant-time operation.
   inline const char *text() const
     /// @returns matched text
   {
     return matcher().text();
   }
-  /// Returns string with a copy of the text matched.
+#if __cplusplus >= 201703L
+  /// Returns the pattern match as a string_view (zero copy), does not include a terminating \0, this is a constant-time operation.
+  inline const std::string_view strview() const
+    /// @returns string_view with text matched
+  {
+    return matcher().strview();
+  }
+#endif
+  /// Returns the pattern match as a string, a copy of text(), may include pattern-matched \0s.
   inline std::string str() const
     /// @returns matched text
   {
     return matcher().str();
   }
-  /// Returns wide string with a copy of the text matched.
+  /// Returns the pattern match as a wide string, converted from UTF-8 text(), may include pattern-matched \0s.
   inline std::wstring wstr() const
     /// @returns matched text
   {

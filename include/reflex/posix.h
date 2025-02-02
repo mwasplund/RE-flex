@@ -58,8 +58,8 @@ class Tables {
 
 const int * range(const char *);
 
-}
+} // namespace Posix
 
-}
+} // namesapce reflex
 
 #endif

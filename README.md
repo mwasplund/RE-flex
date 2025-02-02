@@ -1,70 +1,83 @@
 
 [![logo][logo-url]][reflex-url]
 
-[![build status][travis-image]][travis-url] [![Language grade: C/C++][lgtm-image]][lgtm-url] [![license][bsd-3-image]][bsd-3-url] [![CodeProject][codeproject-image]][codeproject-url]
+[![build status][ci-image]][ci-url] [![license][bsd-3-image]][bsd-3-url] [![CodeProject][codeproject-image]][codeproject-url]
 
-The regex-centric, fast lexical analyzer generator for C++ with full Unicode
-support.
+A high-performance C++ regex library and lexical analyzer generator with
+Unicode support.
 
-[RE/flex][reflex-url] is compatible with Flex lexer specifications and Bison
-parsers.  RE/flex is faster than Flex while providing a wealth of new features
-and contributions.  RE/flex is also much faster than regex libraries such as
+Two example use cases:
+
+1. A RE/flex-generated tokenizer is used by the
+   [Tiger Compiler](https://assignments.lrde.epita.fr/tools/reflex.html).
+2. The RE/flex C++ regex engines are used by [ugrep](https://ugrep.com).
+
+The RE/flex lexical analyzer generator extends Flex++ with Unicode support,
+indent/dedent anchors, POSIX regex lazy quantifiers, word boundaries, functions
+for lex and syntax error reporting, lexer rule execution performance profiling,
+and other new features.
+
+Only RE/flex supports backtrack-free regex lazy matching in linear time using
+an advanced DFA transformation algorithm (invented by Dr. Robert van Engelen.)
+
+RE/flex is faster than Flex and much faster than regex libraries such as
 Boost.Regex, C++11 std::regex, PCRE2 and RE2.  For example, tokenizing a 2 KB
-representative C source code file into 244 tokens takes only 8 microseconds:
+representative C source code file into 244 tokens takes only 8.7 microseconds:
 
 <table>
 <tr><th>Command / Function</th><th>Software</th><th>Time (μs)</th></tr>
-<tr><td><b>reflex --fast --noindent</b></td><td><b>RE/flex 2.0.0</b></td><td><b>8</b></td></tr>
-<tr><td><b>reflex --fast</b></td><td><b>RE/flex 2.0.0</b></td><td><b>9</b></td></tr>
-<tr><td>flex -+ --full</td><td>Flex 2.5.35</td><td>17</td></tr>
-<tr><td>reflex --full</td><td>RE/flex 2.0.0</td><td>18</td></tr>
-<tr><td>boost::spirit::lex::lexertl::actor_lexer::iterator_type</td><td>Boost.Spirit.Lex 1.66.0</td><td>40</td></tr>
-<tr><td>pcre2_jit_match()</td><td>PCRE2 (jit) 10.32</td><td>60</td></tr>
-<tr><td>hs_compile_multi(), hs_scan()</td><td>Hyperscan 5.1.0</td><td>209</td></tr>
-<tr><td>reflex -m=boost-perl</td><td>Boost.Regex 1.66.0</td><td>230</td></tr>
-<tr><td>pcre2_match()</td><td>PCRE2 10.32</td><td>318</td></tr>
-<tr><td>RE2::Consume()</td><td>RE2 (pre-compiled) 2018-04-01</td><td>417</td></tr>
-<tr><td>reflex -m=boost</td><td>Boost.Regex POSIX 1.66.0</td><td>450</td></tr>
-<tr><td>RE2::Consume()</td><td>RE2 POSIX (pre-compiled) 2018-04-01</td><td>1226</td></tr>
-<tr><td>flex -+</td><td>Flex 2.5.35</td><td>3968</td></tr>
-<tr><td>pcre2_dfa_match()</td><td>PCRE2 POSIX (dfa) 10.32</td><td>4094</td></tr>
-<tr><td>regcomp(), regexec()</td><td>GNU C POSIX.2 regex</td><td>5800</td></tr>
-<tr><td>std::cregex_iterator()</td><td>C++11 std::regex</td><td>5979</td></tr>
+<tr><td><b>reflex --fast --noindent</b></td><td><b>RE/flex 3.4.1</b></td><td><b>8.7</b></td></tr>
+<tr><td><b>reflex --fast</b></td><td><b>RE/flex 3.4.1</b></td><td><b>8.9</b></td></tr>
+<tr><td>flex -+ --full</td><td>Flex 2.5.35</td><td>9.8</td></tr>
+<tr><td>boost::spirit::lex::lexertl::actor_lexer::iterator_type</td><td>Boost.Spirit.Lex 1.82.0</td><td>10.7</td></tr>
+<tr><td>reflex --full</td><td>RE/flex 3.4.1</td><td>20.6</td></tr>
+<tr><td>pcre2_jit_match()</td><td>PCRE2 (jit) 10.42</td><td>60.8</td></tr>
+<tr><td>hs_compile_multi(), hs_scan()</td><td>Hyperscan 5.4.2</td><td>129</td></tr>
+<tr><td>reflex -m=boost-perl</td><td>Boost.Regex 1.82.0</td><td>205</td></tr>
+<tr><td>RE2::Consume()</td><td>RE2 (pre-compiled) 2023-09-01</td><td>218</td></tr>
+<tr><td>reflex -m=boost</td><td>Boost.Regex POSIX 1.82.0</td><td>392</td></tr>
+<tr><td>pcre2_match()</td><td>PCRE2 10.42</td><td>500</td></tr>
+<tr><td>RE2::Consume()</td><td>RE2 POSIX (pre-compiled) 2023-09-01</td><td>534</td></tr>
+<tr><td>flex -+</td><td>Flex 2.5.35</td><td>3759</td></tr>
+<tr><td>pcre2_dfa_match()</td><td>PCRE2 POSIX (dfa) 10.42</td><td>4029</td></tr>
+<tr><td>regcomp(), regexec()</td><td>GNU C POSIX.2 regex</td><td>4932</td></tr>
+<tr><td>std::cregex_iterator()</td><td>C++11 std::regex</td><td>6490</td></tr>
 </table>
+
+Note: *performance in elapsed time (lower is better) in microseconds for 1000 to 10000
+benchmark runs using Mac OS X 12.6.9 with clang 12.0.0 -O2, 2.9 GHz Intel Core
+i7, 16 GB 2133 MHz LPDDR3.  Hyperscan disqualifies as a scanner due to its "All
+matches reported" semantics resulting in 1915 matches for this test, and due to
+its event handler requirements.*
+[Download the tests](https://www.genivia.com/files/perfcomp.zip)
 
 The performance table is indicative of the impact on performance when using
 PCRE2 and Boost.Regex with RE/flex.  PCRE2 and Boost.Regex are optional
 libraries integrated with RE/flex for Perl matching because of their
-efficiency.  By default, RE/flex uses DFA-based extended POSIX matching,
-which is the fastest method as shown in the table.
+efficiency.  By default, RE/flex uses DFA-based extended regular expression
+matching in linear time, the fastest method (as shown in the table).
 
 The RE/flex matcher tracks line numbers, column numbers, and indentations,
-whereas Flex does not (option noyylineno) and neither do the other regex
+whereas Lex and Flex do not (option noyylineno) and neither do the other regex
 matchers in the table (except PCRE2 and Boost.Regex when used with RE/flex).
 Tracking this information incurs some overhead.  RE/flex also automatically
 decodes UTF-8/16/32 input and accepts `std::istream`, strings, and wide strings
 as input.
 
-Note: *Best times of 30 tests with average time in microseconds over 100 runs
-executed on the command line using Mac OS X 10.12.6 clang 9.0.0 -O2, 2.9 GHz
-Intel Core i7, 16 GB 2133 MHz LPDDR3.  Hyperscan disqualifies as a scanner due
-to its "All matches reported" semantics resulting in 1915 matches for this
-test, and due to its event handler requirements.*
-[Download the tests](https://www.genivia.com/files/perfcomp.zip)
-*Timings on other platforms may differ, though in the worst cases tested,
-reflex ran equally fast or slightly faster than the best times of Flex.*
-
 Features
 --------
 
+- Includes many examples, such as a mini C compiler to Java bytecode, a
+  tokenizer for C/C++ source code, a tokenizer for Python source code, a
+  tokenizer for Java source code, Lua, JSON, XML, YAML, and more.
 - Compatible with Flex and Bison to eliminate a learning curve, making a
   transition from Flex++ to RE/flex frustration-free.
-- IEEE POSIX P1003.2 standard compliant (like Lex and Flex).
-- Includes methods for lex/syntax error reporting and recovery.
-- Generates reusable source code that is easy to understand.
-- Integrates seamlessly with Bison and generates Reentrant, Bison-Bridge,
-  Bison-Locations, Bison 3.0 C++ interface `%skeleton "lalr1.cc"` and Bison
-  Complete Symbols.
+- Auto-generates code that integrates seamlessly with Bison Reentrant,
+  Bison-Bridge, Bison-Locations, Bison 3.0 C++ interface `%skeleton
+  "lalr1.cc"` and Bison Complete Symbols.
+- Generates code and includes methods for lexical and syntax error reporting
+  and recovery.
+- The generated scanner source code is structured and easy to understand.
 - Fully supports Unicode and Unicode properties `\p{C}`, including Unicode
   identifier matching for C++11, Java, C#, and Python source code.
 - Auto-detects UTF-8/16/32 input to match Unicode patterns.
@@ -72,13 +85,9 @@ Features
   CP 437, CP 850, CP 858, KOI8, MACROMAN, EBCDIC, and custom code pages.
 - Generates scanners for lexical analysis on files, C++ streams, (wide)
   strings, and memory such as mmap files.
-- Includes many examples, such as a mini C compiler to Java bytecode, a
-  tokenizer for C/C++ source code, a tokenizer for Python source code, a
-  tokenizer for Java source code, and more.
-- Extensive documentation in the online [User Guide][manual-url].
-- Indent/nodent/dedent anchors to match text with indentation, including
-  custom `\t` (tab) widths.
-- Lazy quantifiers, no hacks are needed to work around greedy repetitions.
+- Indent/nodent/dedent anchors to match indentation levels to tokenize.
+- Lazy quantifiers for POSIX regex matching, i.e. no hacks are needed to work
+  around greedy repetitions.
 - Word boundary anchors.
 - Freespace mode option to improve readability of lexer specifications.
 - `%class` and `%init` to customize the generated Lexer classes.
@@ -92,22 +101,20 @@ Features
   regex engines, including the RE/flex regex engine, PCRE2, and Boost.Regex.
 - The RE/flex regex library makes C++11 std::regex, PCRE2, and Boost.Regex much
   easier to use for pattern matching on (wide) strings, files, and streams.
+- IEEE POSIX P1003.2 standard compliant like Lex and Flex (but generates C++).
+- Extensive documentation in the online [User Guide][manual-url].
 - Lots of other improvements over Flex++, such as `yypush_buffer_state` saves
   the scanner state (line, column, and indentation positions), not just the
   input buffer; no input buffer length limit (Flex has a 16KB limit); `line()`
   returns the current line (e.g. for error reporting).
 
-The RE/flex software is fully self-contained.  No other libraries are required.
-PCRE2 and Boost.Regex are optional to use as regex engines.
-
-The RE/flex repo includes a Mini C compiler demo and tokenizers for Java,
-Python, C/C++, JSON, XML, YAML.
-
+Note: PCRE2 and Boost.Regex are not dependencies, they can be used as optional
+regex engines in addition to the RE/flex regex engine.
 
 Installation
 ------------
 
-### Windows users
+### Windows
 
 Use `reflex/bin/reflex.exe` from the command line or add a **Custom Build
 Step** in MSVC++ as follows:
@@ -142,19 +149,16 @@ to run `reflex.exe`).  Drag the generated `lex.yy.h` (if present) and
 In addition, the `reflex/vs` directory contains batch scripts to build projects
 with MS Visual Studio C++.
 
-### Unix/Linux and Mac OS X
+### MacOS
 
 On macOS systems you can use [homebrew](https://brew.sh) to install RE/flex
-with `brew install re-flex`.
+with `brew install re-flex`.  Or use [MacPorts](https://www.macports.org)
+to install RE/flex with `sudo port install re-flex`.
+
+### NetBSD
 
 On NetBSD systems you can use the standard NetBSD package installer (pkgsrc):
 <http://cdn.netbsd.org/pub/pkgsrc/current/pkgsrc/devel/RE-flex/README.html>
-
-Otherwise, you have two options: 1) quick install or 2) configure and make.
-
-**Note:** GCC 8 and greater may produce warnings of the sort *"note: parameter
-passing for argument ... changed in GCC 7.1"*.  These warnings should be
-ignored.
 
 ### Quick install
 
@@ -208,7 +212,7 @@ To build the examples also:
     $ ./configure --enable-examples && make
 
 After this successfully completes, you can optionally run `make install` to
-install the `reflex` command and `libreflex` library:
+install the `reflex` command and the `libreflex` library:
 
     $ sudo make install
 
@@ -252,7 +256,7 @@ Usage
 There are two ways you can use this project:
 
 1. as a scanner generator for C++, similar to Flex;
-2. as a flexible regex matching API for C++.
+2. as a flexible regex library API for C++.
 
 For the first option, simply build the **reflex** tool and run it on the
 command line on a lexer specification:
@@ -272,7 +276,8 @@ Several examples are included to get you started.  See the [manual][manual-url]
 for more details.
 
 For the second option, simply use the RE/flex matcher API classes to start
-pattern matching on strings, wide strings, files, and streams.
+pattern search, matching, splitting and scanning on strings, wide strings,
+files, and streams.
 
 You can select matchers that are based on different regex engines:
 
@@ -375,10 +380,18 @@ std::vector<std::string> words(matcher.find.begin(), matcher.find.end());
 Use C++11 range-based loops with RE/flex iterators:
 
 ```{.cpp}
-#include <reflex/stdmatcher.h> // reflex::StdMatcher, reflex::Input, std::regex
-// use a StdMatcher with std::regex to search for words in a sentence
-reflex::StdMatcher matcher("\\w+", "How now brown cow.");
+#include <reflex/pcre2matcher.h> // reflex::PCRE2TFMatcher, reflex::Input, std::regex
+// use a PCRE2UTFMatcher to search for words in a sentence
+reflex::PCRE2UTFMatcher matcher("\\w+", "How now brown cow.");
 for (auto& match : matcher.find)
+  std::cout << "Found " << match.text() << std::endl;
+```
+
+Note that we cannot generally simplify this loop to the following, because the
+temporary matcher object is destroyed (some compilers handle this in C++23):
+
+```{.cpp}
+for (auto& match : reflex::PCRE2UTFMatcher matcher("\\w+", "How now brown cow.").find);
   std::cout << "Found " << match.text() << std::endl;
 ```
 
@@ -389,6 +402,7 @@ underlying regex library understands and will be able to use:
 
 - `std::string reflex::Matcher::convert(const std::string& regex, reflex::convert_flag_type flags)`
 - `std::string reflex::PCRE2Matcher::convert(const std::string& regex, reflex::convert_flag_type flags)`
+- `std::string reflex::PCRE2UTFMatcher::convert(const std::string& regex, reflex::convert_flag_type flags)`
 - `std::string reflex::BoostMatcher::convert(const std::string& regex, reflex::convert_flag_type flags)`
 - `std::string reflex::StdMatcher::convert(const std::string& regex, reflex::convert_flag_type flags)`
 
@@ -427,7 +441,7 @@ License and copyright
 ---------------------
 
 RE/flex by Robert van Engelen, Genivia Inc.
-Copyright (c) 2016-2020, All rights reserved.
+Copyright (c) 2016-2023, All rights reserved.
 
 RE/flex is distributed under the BSD-3 license LICENSE.txt.
 Use, modification, and distribution are subject to the BSD-3 license.
@@ -555,7 +569,7 @@ Changelog
 - Oct 11, 2021: 3.0.12 updated to Unicode 14; fixed a compilation issue with `--params` when used with `--flex`.
 - Dec 10, 2021: 3.1.0 improved buffering mechanism with reduced buffer sizes; faster `columno()` for long lines; fix CP-1251 table typo.
 - Feb 20, 2022: 3.2.0 new `%option ctorinit`; faster compilation of regular expressions to tables and direct code DFAs; refactored SIMD source code to enable AVX2 and AVX512BW optimizations in multi-version matcher code; updated Windows binary file opening.
-- Feb 23, 2022: 3.2.1 regression bug fix.
+- Feb 23, 2022: 3.2.1 regression bug in 3.2.0 fix.
 - Mar 13, 2022: 3.2.2 minor improvements.
 - Apr  2, 2022: 3.2.3 fixed C++17 compliance and dso build.
 - Apr 29, 2022: 3.2.4 new `%begin` directive; new `--batch=SIZE` option argument.
@@ -566,6 +580,36 @@ Changelog
 - Aug 12, 2022: 3.2.9 add cmake rules for Windows builds.
 - Aug 21, 2022: 3.2.10 bug fix in regular expression converter.
 - Aug 29, 2022: 3.2.11 new lua2lisp transpiler example with Bison complete symbols and locations.
+- Jan  6, 2023: 3.2.12 regression bug fix in trailing context pattern matching, e.g. `xy` and `x/x` patterns collided when they should not; updated yaml parser example.
+- Jan 24, 2023: 3.3.0 overall update; corrected a problem with Unicode characters in regex patterns adjacent to curly braces; permit cxx extension in FSM filename output.
+- Mar  6, 2023: 3.3.1 for consistency include NAME in default header file name, tables file name, and graphs file name when option `--prefix` is specified.
+- Mar 17, 2023: 3.3.2 fix a performance issue with case-insensitive pattern construction.
+- May 28, 2023: 3.3.3 fix `yyrestart` dropping the first character; faster `Matcher::find()`.
+- May 31, 2023: 3.3.4 fix `Matcher::find()` initialization issue in 3.3.3.
+- Jun 12, 2023: 3.3.5 improve source code output of lexer class definitions.
+- Jul 11, 2023: 3.3.6 faster `Matcher::find()`; improved `--stdout` to include tables.
+- Jul 17, 2023: 3.3.7 faster `Matcher::find()`.
+- Aug  4, 2023: 3.3.8 minor update to sync up the code base with the ugrep project.
+- Aug 16, 2023: 3.3.9 fix avx512bw compilation error; new LineMatcher matching engine.
+- Sep 16, 2023: 3.4.0 fix `FuzzyMatcher::DEL` flag when this is the only flag selected; fix `FuzzyMatcher::matches()` bug that incorrectly matched an extra character before the end of the input; optimize `find()`; updated saving the FSM `pred[]` hashes to a file, which has changed; increase default buffer size `REFLEX_BUFSZ` to 128K for best throughput performance.
+- Sep 25, 2023: 3.4.1 make word boundaries `\b`, `\B`, `\<` and `\>` applicable anywhere in a pattern.
+- Oct  7, 2023: 3.5.0 updated to Unicode 15.1; clarify `.` (dot) with `%unicode` enabled, which is a catch-all pattern; update `\X` to match only valid Unicode characters.
+- Nov  5, 2023: 3.5.1 minor improvements.
+- Feb 17, 2024: 4.0.0 faster `Matcher::find()` with a new DFA cut algorithm to optimize match prediction speed and accuracy, see also ugrep 5.0; apply Unicode pattern canonicalization with `reflex::convert(..., reflex::convert_flag::unicode)`.
+- Feb 23, 2024: 4.0.1 new `rawk` example to demonstrate awk-like fast search in C++; enable `<<EOF>>` rules for option `find` to generate a fast search engine.
+- Mar  5, 2024: 4.1.0 improved lazy quantifiers for POSIX regex lazy matching in linear time using an advanced DFA transformation algorithm introduced in RE/flex in 2016.
+- Mar 11, 2024: 4.1.1 minor update to correct a DFA construction problem for POSIX regex lazy quantifiers matching too much in some cases.
+- Mar 17, 2024: 4.1.2 updated configure scripts; cast negative ctype function arguments (problem detected on NetBSD 10).
+- Mar 27, 2024: 4.2.0 support pkg-config with `reflex.pc` (and `reflexmin.pc` minimized library) to use the reflex library `-lreflex`.
+- Apr 10, 2024: 4.2.1 minor update to adjust the current input pointer by one when not matching anything.
+- May 12, 2024: 4.3.0 faster `Matcher::find()` with refactored SIMD (SSE2/AVX2/AVX512BW/NEON/AArch64) code; larger default 256KB buffer (from 128KB).
+- Jun  6, 2024: 4.4.0 upgraded `reflex::Matcher` and `reflex::FuzzyMatcher` to respect Unicode word boundaries instead of only ASCII `\<`, `\>`, `\b`, `\B`; upgraded regex Unicode converters to Unicode `[::]` character classes instead of only ASCII `[[:alpha:]]` etc.; improved FSM code generation without local c0.
+- Aug  1, 2024: 4.5.0 minor speed improvements.
+- Oct 29, 2024: 5.0.0 faster SIMD regex search methods; improved anchor and word boundary matching speed and support; new `std::string_view strview()` matcher method.
+- Nov 29, 2024: 5.1.0 appease `-Woverload-virtual` and `-Wshadow` warnings; fix a bug in case-insensitive Unicode negated character class matching too much.
+- Jan  9, 2025: 5.1.1 fix a minor issue with case-insensitive matching when regex patterns are specified in certain ways in combination with "string-like" patterns such that one ore more alternating sub-patterns overlap from the start.
+- Jan 24, 2025: 5.2.0 new file encoding type `null_data` to read NUL as LF and vice versa; supports reading `xargs -0` output for example.
+- Jan 27, 2025: 5.2.1 fix a regression issue with non-SIMD-optimized search with `Matcher::find()`.
 
 [logo-url]: https://www.genivia.com/images/reflex-logo.png
 [reflex-url]: https://www.genivia.com/reflex.html
@@ -577,10 +621,8 @@ Changelog
 [FSM-url]: https://www.genivia.com/images/reflex-FSM.png
 [boost-url]: http://www.boost.org
 [pcre-url]: http://www.pcre.org
-[travis-image]: https://travis-ci.com/Genivia/RE-flex.svg?branch=master
-[travis-url]: https://app.travis-ci.com/Genivia/RE-flex
-[lgtm-image]: https://img.shields.io/lgtm/grade/cpp/g/Genivia/RE-flex.svg?logo=lgtm&logoWidth=18
-[lgtm-url]: https://lgtm.com/projects/g/Genivia/RE-flex/context:cpp
+[ci-image]: https://github.com/Genivia/RE-flex/actions/workflows/c-cpp.yml/badge.svg
+[ci-url]: https://github.com/Genivia/RE-flex/actions/workflows/c-cpp.yml
 [bsd-3-image]: https://img.shields.io/badge/license-BSD%203--Clause-blue.svg
 [bsd-3-url]: https://opensource.org/licenses/BSD-3-Clause
 [codeproject-image]: https://img.shields.io/badge/CodeProject-★★★★★-orange.svg

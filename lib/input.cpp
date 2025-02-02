@@ -28,7 +28,7 @@
 
 /**
 @file      input.cpp
-@brief     RE/flex input character sequence class and simd.h CPUID check
+@brief     RE/flex input character sequence class
 @author    Robert van Engelen - engelen@genivia.com
 @copyright (c) 2016-2020, Robert van Engelen, Genivia Inc. All rights reserved.
 @copyright (c) BSD-3 License - see LICENSE.txt
@@ -1015,6 +1015,22 @@ size_t Input::file_get(char *s, size_t n)
       if (size_ + s >= t)
         size_ -= t - s;
       return t - s;
+    case file_encoding::null_data:
+    {
+      char *r = t;
+      t += ::fread(t, 1, n, file_);
+      while (r < t)
+      {
+        if (*r == '\0')
+          *r = '\n';
+        else if (*r == '\n')
+          *r = '\0';
+        ++r;
+      }
+      if (size_ + s >= t)
+        size_ -= t - s;
+      return t - s;
+    }
     default:
       t += ::fread(t, 1, n, file_);
       if (size_ + s >= t)
@@ -1375,28 +1391,5 @@ void Input::file_encoding(unsigned short enc, const unsigned short *page)
     utfx_ = enc;
   }
 }
-
-#if defined(HAVE_AVX512BW) || defined(HAVE_AVX2) || defined(HAVE_SSE2)
-
-#include <reflex/simd.h>
-
-// simd.h get_HW()
-static uint64_t get_HW()
-{
-  int CPUInfo1[4] = { 0, 0, 0, 0 };
-  int CPUInfo7[4] = { 0, 0, 0, 0 };
-  cpuidex(CPUInfo1, 0, 0);
-  int n = CPUInfo1[0];
-  if (n <= 0)
-    return 0ULL;
-  cpuidex(CPUInfo1, 1, 0); // cpuid EAX=1
-  if (n >= 7)
-    cpuidex(CPUInfo7, 7, 0); // cpuid EAX=7, ECX=0
-  return static_cast<uint32_t>(CPUInfo1[2]) | (static_cast<uint64_t>(static_cast<uint32_t>(CPUInfo7[1])) << 32);
-}
-
-uint64_t HW = get_HW();
-
-#endif
 
 } // namespace reflex

@@ -21,7 +21,7 @@
      <td>
       <div style="float: right; font-size: 18px; font-weight: bold;">simd.h File Reference</div>
       <br>
-      <div style="float: right; font-size: 10px;">updated Sun Aug 21 2022 by Robert van Engelen</div>
+      <div style="float: right; font-size: 10px;">updated Mon Jan 27 2025 by Robert van Engelen</div>
      </td>
      <td width="10%">&nbsp;</td>
     </tr>
@@ -49,37 +49,65 @@
 </div>
 </div><!-- top -->
 <div class="header">
+  <div class="summary">
+<a href="#namespaces">Namespaces</a> &#124;
+<a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
 <div class="title">simd.h File Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
 
-<p>RE/flex SIMD intrinsics.  
+<p>RE/flex SIMD primitives.  
 <a href="#details">More...</a></p>
-<div class="textblock"><div class="dynheader">
+<div class="textblock"><code>#include &lt;cstddef&gt;</code><br />
+<code>#include &lt;cstdint&gt;</code><br />
+<code>#include &lt;cstdlib&gt;</code><br />
+</div><div class="textblock"><div class="dynheader">
+Include dependency graph for simd.h:</div>
+<div class="dyncontent">
+<div class="center"><img src="simd_8h__incl.png" border="0" usemap="#simd_8h" alt=""/></div>
+</div>
+</div><div class="textblock"><div class="dynheader">
 This graph shows which files directly or indirectly include this file:</div>
 <div class="dyncontent">
 <div class="center"><img src="simd_8h__dep__incl.png" border="0" usemap="#simd_8hdep" alt=""/></div>
 <map name="simd_8hdep" id="simd_8hdep">
-<area shape="rect" id="node2" href="absmatcher_8h.html" title="RE/flex abstract matcher base class and pattern matcher class. " alt="" coords="240,80,343,107"/>
-<area shape="rect" id="node3" href="abslexer_8h.html" title="RE/flex abstract lexer base class for reflex&#45;generated scanners. " alt="" coords="5,155,89,181"/>
-<area shape="rect" id="node5" href="boostmatcher_8h.html" title="Boost::regex&#45;based matcher engines for pattern matching. " alt="" coords="113,155,227,181"/>
-<area shape="rect" id="node6" href="matcher_8h.html" title="RE/flex matcher engine. " alt="" coords="251,155,332,181"/>
-<area shape="rect" id="node7" href="pcre2matcher_8h.html" title="PCRE2&#45;JIT&#45;based matcher engines for pattern matching. " alt="" coords="357,155,471,181"/>
-<area shape="rect" id="node8" href="stdmatcher_8h.html" title="C++11 std::regex&#45;based matcher engines for pattern matching. " alt="" coords="495,155,594,181"/>
-<area shape="rect" id="node4" href="flexlexer_8h.html" title="RE/flex Flex&#45;compatible FlexLexer base class and Flex&#45;compatible macros. " alt="" coords="6,229,89,256"/>
+<area shape="rect" id="node2" href="absmatcher_8h.html" title="RE/flex abstract matcher base class and pattern matcher class. " alt="" coords="300,80,399,107"/>
+<area shape="rect" id="node3" href="abslexer_8h.html" title="RE/flex abstract lexer base class for reflex&#45;generated scanners. " alt="" coords="5,155,86,182"/>
+<area shape="rect" id="node5" href="boostmatcher_8h.html" title="Boost::regex&#45;based matcher engines for pattern matching. " alt="" coords="110,155,221,182"/>
+<area shape="rect" id="node6" href="linematcher_8h.html" title="a matcher engine to match lines and nothing else " alt="" coords="244,155,343,182"/>
+<area shape="rect" id="node7" href="matcher_8h.html" title="RE/flex matcher engine. " alt="" coords="366,155,445,182"/>
+<area shape="rect" id="node9" href="pcre2matcher_8h.html" title="PCRE2&#45;JIT&#45;based matcher engines for pattern matching. " alt="" coords="469,155,579,182"/>
+<area shape="rect" id="node10" href="stdmatcher_8h.html" title="C++11 std::regex&#45;based matcher engines for pattern matching. " alt="" coords="604,155,700,182"/>
+<area shape="rect" id="node4" href="flexlexer_8h.html" title="RE/flex Flex&#45;compatible FlexLexer base class and Flex&#45;compatible macros. " alt="" coords="5,230,86,257"/>
+<area shape="rect" id="node8" href="fuzzymatcher_8h.html" title="RE/flex fuzzy matcher engine. " alt="" coords="350,230,461,257"/>
 </map>
 </div>
-</div><a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>RE/flex SIMD intrinsics. </p>
+</div><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="namespaces"></a>
+Namespaces</h2></td></tr>
+<tr class="memitem:namespacereflex"><td class="memItemLeft" align="right" valign="top"> &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacereflex.html">reflex</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
+Functions</h2></td></tr>
+<tr class="memitem:a52d50452d59b78229c800cffff315525"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacereflex.html#a52d50452d59b78229c800cffff315525">reflex::nlcount</a> (const char *s, const char *e)</td></tr>
+<tr class="memdesc:a52d50452d59b78229c800cffff315525"><td class="mdescLeft">&#160;</td><td class="mdescRight">Count newlines in string s up to position e in the string.  <a href="namespacereflex.html#a52d50452d59b78229c800cffff315525">More...</a><br /></td></tr>
+<tr class="separator:a52d50452d59b78229c800cffff315525"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab74e91cfc995859be6e69f954c0bcc10"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacereflex.html#ab74e91cfc995859be6e69f954c0bcc10">reflex::isutf8</a> (const char *s, const char *e)</td></tr>
+<tr class="memdesc:ab74e91cfc995859be6e69f954c0bcc10"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if valid UTF-8 encoding and does not include a NUL, but accept surrogates and 3/4 byte overlongs.  <a href="namespacereflex.html#ab74e91cfc995859be6e69f954c0bcc10">More...</a><br /></td></tr>
+<tr class="separator:ab74e91cfc995859be6e69f954c0bcc10"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><p>RE/flex SIMD primitives. </p>
 <dl class="section author"><dt>Author</dt><dd>Robert van Engelen - <a href="#" onclick="location.href='mai'+'lto:'+'eng'+'el'+'en@'+'ge'+'niv'+'ia'+'.co'+'m'; return false;">engel<span style="display: none;">.nosp@m.</span>en@g<span style="display: none;">.nosp@m.</span>enivi<span style="display: none;">.nosp@m.</span>a.co<span style="display: none;">.nosp@m.</span>m</a> </dd></dl>
-<dl class="section copyright"><dt>Copyright</dt><dd>(c) 2016-2022, Robert van Engelen, Genivia Inc. All rights reserved. </dd>
+<dl class="section copyright"><dt>Copyright</dt><dd>(c) 2016-2024, Robert van Engelen, Genivia Inc. All rights reserved. </dd>
 <dd>
 (c) BSD-3 License - see LICENSE.txt </dd></dl>
 </div></div><!-- contents -->
 <hr class="footer">
 <address class="footer"><small>
-Converted on Sun Aug 21 2022 12:04:16 by <a target="_blank" href="http://www.doxygen.org/index.html">Doxygen</a> 1.8.11</small></address>
+Converted on Mon Jan 27 2025 10:58:21 by <a target="_blank" href="http://www.doxygen.org/index.html">Doxygen</a> 1.8.11</small></address>
 <br>
 <div style="height: 246px; background: #DBDBDB;">
 </body>

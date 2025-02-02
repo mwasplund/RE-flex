@@ -116,6 +116,9 @@ Test tests[] = {
   { "(?i:abc(?-i:xyz))|ABCXYZ", "", "", "abcxyzABCxyzABCXYZ", { 1, 1, 2 } },
   { "(?i)aaa|abc|aac|def", "", "", "aaaabcaacdefAAAABCAACDEF", { 1, 2, 3, 4, 1, 2, 3, 4 } },
   { "(?i)aaa|abc|aac?|aaad?", "", "", "aaaabcaacaaadAAAABCAACAAAD", { 1, 2, 3, 4, 1, 2, 3, 4 } },
+  { "(?i)a[^b]c|abc", "", "", "aacAACabcABCaBcAbC", { 1, 1, 2, 2, 2, 2 } },
+  { "(?i)a[aC-z]c|abc", "", "", "aacAACabcABCaBcAbC", { 1, 1, 2, 2, 2, 2 } },
+  { "(?i:abcd(ef)?)", "", "", "ABCdefabcd", { 1, 1 } },
   // Pattern option x
   { "(?x) a\tb\n c | ( xy ) z ?", "", "", "abcxy", { 1, 2 } },
   { "(?x: a b\n c)", "", "", "abc", { 1 } },
@@ -155,7 +158,7 @@ Test tests[] = {
   { "a?\?b?b", "", "", "abb", { 1 } }, // 'abb'
   // Lazy closure X*
   { "a*?a", "", "", "aaaa", { 1, 1, 1, 1 } },
-  { "a*?|a|b", "", "", "aab", { 2, 2, 3 } },
+  { "a*?|b", "", "", "aab", { 1, 1, 2 } },
   { "(a|bb)*?abb", "", "", "abbbbabb", { 1, 1 } },
   { "ab*?|b", "", "", "ab", { 1, 2 } },
   { "(ab)*?|b", "", "", "b", { 2 } },
@@ -198,6 +201,15 @@ Test tests[] = {
   { "(ab|cd){1,3}?ababab", "", "", "cdababababababab", { 1, 1 } },
   { "(a|b){1,}?a|a", "", "", "bbaaa", { 1, 1 } },
   { "(a|b){2,}?a|aa", "", "", "bbbaaaa", { 1, 1 } },
+  // Lazy misc tests
+  { "(c[ab]*)*?cb|bb", "", "", "caaabcabcbbbcbcb", { 1, 2, 1, 1 } },
+  { "(c[ab]*)[abc]*?cb|bb", "", "", "caaabcabcbbb", { 1, 2 } },
+  { "((a|b)??b)*", "", "", "ababab", { 1 } },
+  { "((a|b)*?b)*", "", "", "abaaab", { 1 } },
+  { "((a|b)+?b)*", "", "", "bbaaab", { 1 } },
+  { "((a|b)??b)+", "", "", "babbab", { 1 } },
+  { "((a|b)*?b)+", "", "", "baabb", { 1 } },
+  { "((a|b)+?)?", "", "", "abb", { 1, 1, 1 } },
   // Bracket lists
   { "[a-z]", "", "", "abcxyz", { 1, 1, 1, 1, 1, 1 } },
   { "[a-d-z]", "", "", "abcd-z", { 1, 1, 1, 1, 1, 1 } },
@@ -211,6 +223,7 @@ Test tests[] = {
   { "[][]", "", "", "[]", { 1, 1 } },
   // Lookahead
   { "a(?=bc)|ab(?=d)|bc|d", "", "", "abcdabd", { 1, 3, 4, 2, 4 } },
+  { "ab|a(?=[ab])", "", "", "abaab", { 1, 2, 1 } },
   { "a(a|b)?(?=a)|a", "", "", "aba", { 1, 2 } }, // Ambiguous, undefined in POSIX
   { "zx*(?=xy*)|x?y*", "", "", "zxxy", { 1, 2 } }, // Ambiguous, undefined in POSIX
   // { "[ab]+(?=ab)|-|ab", "", "", "aaab-bbab", { 1, 3, 2, 1, 3 } }, // Ambiguous, undefined in POSIX
@@ -238,6 +251,15 @@ Test tests[] = {
   { "\\b(-|a)(-|a)\\b| ", "", "", "aa aa", { 1, 2, 1 } },
   { "\\B(-|a)(-|a)\\B|b|#", "", "", "baab#--#", { 2, 1, 2, 3, 1, 3 } },
   { "\\<.*ab\\>|[ab]*|-|\\n", "", "", "-aaa-aaba-aab-\n-aaa", { 3, 1, 3, 4, 3, 2 } },
+  { "a.*\\bbb.*\\b", "", "", "a--bb--cc--bb", { 1 } },
+  { "[ab]-\\<([bc]|\\<c)|c", "", "", "a-bc", { 1, 2 } },
+  { "a|(\\Bb?)*c", "", "", "abc", { 1, 2 } },
+  { "-\\b(-|a)(-|a)\\b", "", "", "-aa", { 1 } },
+  { "a\\b(-|a)(-|a)\\b", "", "", "a-a", { 1 } },
+  { "a?\\>(-|a)(-|a)\\b-a", "", "", "a-a-a", { 1 } },
+  { "\\b(-|a)(-|a)\\bz?| ", "", "", "aa a-z", { 1, 2, 1 } },
+  { "(-|a)(-|a)\\bz?| ", "", "", "aa a-z", { 1, 2, 1 } },
+  { "a?\\b(-|a)(-|a)\\b|b", "", "", "a-ba-a", { 1, 2, 1 } },
   // Indent and matcher option T (Tab)
   { "(?m)^[ \\t]+|[ \\t]+\\i|[ \\t]*\\j|a|[ \\n]", "m", "", "a\n  a\n  a\n    a\n", { 4, 5, 2, 4, 5, 1, 4, 5, 2, 4, 5, 3, 3 } },
   { "(?m)^[ \\t]+|^[ \\t]*\\i|^[ \\t]*\\j|\\j|a|[ \\n]", "m", "", "a\n  a\n  a\n    a\n", { 5, 6, 2, 5, 6, 1, 5, 6, 2, 5, 6, 4, 4 } },
