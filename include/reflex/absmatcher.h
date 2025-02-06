@@ -1693,7 +1693,7 @@ class PatternMatcher : public AbstractMatcher {
       delete pat_;
   }
   /// Assign a matcher, the underlying pattern object is shared (not deep copied).
-  virtual PatternMatcher& operator=(const PatternMatcher& matcher) ///< matcher with pattern to use (pattern may be shared)
+  PatternMatcher& operator=(const PatternMatcher& matcher) ///< matcher with pattern to use (pattern may be shared)
   {
     scan.init(this, Const::SCAN);
     find.init(this, Const::FIND);

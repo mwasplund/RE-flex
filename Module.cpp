@@ -1,5 +1,7 @@
 module;
 
+#include <array>
+#include <bitset>
 #include <cstring>
 #include <functional>
 #include <iostream>
@@ -10,6 +12,7 @@ module;
 #include <sstream>
 #include <stack>
 #include <string>
+#include <utility>
 
 #include <cstddef>
 
