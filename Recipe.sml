@@ -1,6 +1,6 @@
 Name: 'reflex'
 Language: 'C++|0'
-Version: '1.0.5'
+Version: 5.2.1
 EnableWarningsAsErrors: false
 IncludePaths: [
 	'include/'
@@ -13,6 +13,7 @@ Source: [
 	'lib/matcher.cpp'
 	'lib/pattern.cpp'
 	'lib/posix.cpp'
+	'lib/simd.cpp'
 	'lib/unicode.cpp'
 	'lib/utf8.cpp'
 	'unicode/block_scripts.cpp'

@@ -25,8 +25,8 @@ export module reflex;
 #pragma warning(disable:4127)
 #pragma warning(disable:4244)
 
-#include "reflex/abslexer.h"
-#include "reflex/matcher.h"
+#include <reflex/abslexer.h>
+#include <reflex/matcher.h>
 #include <reflex/posix.h>
 #include <reflex/timer.h>
 #include <reflex/unicode.h>

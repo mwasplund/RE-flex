@@ -40,6 +40,7 @@ module;
 #include <cstring>
 #include <iostream>
 #include <map>
+#include <set>
 #include <vector>
 #define WITH_VECTOR
 #define WITH_TREE_DFA

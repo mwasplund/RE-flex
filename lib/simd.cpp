@@ -34,7 +34,17 @@
 @copyright (c) BSD-3 License - see LICENSE.txt
 */
 
+#ifdef SOUP_BUILD
+module;
+#include <cstdint>
+#include <cstring>
+#else
 #include <reflex/simd.h>
+#endif
+
+#ifdef SOUP_BUILD
+module reflex;
+#endif
 
 namespace reflex {
 

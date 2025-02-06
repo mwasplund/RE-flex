@@ -44,18 +44,6 @@ module;
 #include <reflex/debug.h>
 #endif
 
-#if defined(COMPILE_AVX512BW) && !defined(HAVE_AVX512BW)
-
-// appease ranlib "has no symbols"
-void matcher_not_compiled_with_avx512bw() { }
-
-#elif defined(COMPILE_AVX2) && !defined(HAVE_AVX2) && !defined(HAVE_AVX512BW)
-
-// appease ranlib "has no symbols"
-void matcher_not_compiled_with_avx2() { }
-
-#else
-
 #ifdef SOUP_BUILD
 module reflex;
 #else
