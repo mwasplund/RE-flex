@@ -30,7 +30,7 @@
 @file      matcher_avx512bw.cpp
 @brief     RE/flex matcher engine
 @author    Robert van Engelen - engelen@genivia.com
-@copyright (c) 2016-2024, Robert van Engelen, Genivia Inc. All rights reserved.
+@copyright (c) 2016-2025, Robert van Engelen, Genivia Inc. All rights reserved.
 @copyright (c) BSD-3 License - see LICENSE.txt
 */
 
@@ -90,8 +90,8 @@ void Matcher::simd_init_advance_avx512bw()
 template<uint8_t LEN>
 bool Matcher::simd_advance_chars_avx512bw(size_t loc)
 {
-  static const uint16_t lcp = 0;
-  static const uint16_t lcs = LEN - 1;
+  const uint16_t lcp = 0;
+  const uint16_t lcs = LEN - 1;
   const char *chr = pat_->chr_;
   while (true)
   {
@@ -104,44 +104,59 @@ bool Matcher::simd_advance_chars_avx512bw(size_t loc)
       __m512i vlcpm = _mm512_loadu_si512(reinterpret_cast<const __m512i*>(s));
       __m512i vlcsm = _mm512_loadu_si512(reinterpret_cast<const __m512i*>(s + lcs - lcp));
       uint64_t mask = _mm512_cmpeq_epi8_mask(vlcp, vlcpm) & _mm512_cmpeq_epi8_mask(vlcs, vlcsm);
-      while (mask != 0)
+      while (REFLEX_UNLIKELY(mask != 0))
       {
         uint32_t offset = ctzl(mask);
         if (LEN == 2 ||
             (LEN == 3 ? s[offset + 1 - lcp] == chr[1] : std::memcmp(s + 1 - lcp + offset, chr + 1, LEN - 2) == 0))
         {
-          loc = s - lcp + offset - buf_;
-          set_current(loc);
+          size_t k = s - lcp + offset - buf_;
+          set_current(k);
           return true;
         }
         mask &= mask - 1;
       }
       s += 64;
     }
-    s -= lcp;
-    loc = s - buf_;
+    while (s < e)
+    {
+      do
+        s = static_cast<const char*>(std::memchr(s, chr[lcp], e - s));
+      while (s != NULL && s[lcs - lcp] != chr[lcs] && ++s < e);
+      if (s == NULL || s >= e)
+      {
+        s = e;
+        break;
+      }
+      if (LEN == 2 ||
+          (LEN == 3 ? s[1 - lcp] == chr[1] : std::memcmp(s + 1 - lcp, chr + 1, LEN - 1) == 0))
+      {
+        size_t k = s - lcp - buf_;
+        set_current(k);
+        return true;
+      }
+      ++s;
+    }
+    loc = s - lcp - buf_;
     set_current_and_peek_more(loc);
     loc = cur_;
-    if (loc + LEN > end_)
+    if (loc + LEN > end_ && eof_)
       return false;
-    if (loc + LEN + 63 > end_)
-      break;
   }
-  return advance_chars<LEN>(loc);
 }
 
 /// Few chars followed by 2 to 3 minimal char pattern
 template<uint8_t LEN>
 bool Matcher::simd_advance_chars_pma_avx512bw(size_t loc)
 {
-  static const uint16_t lcp = 0;
-  static const uint16_t lcs = LEN - 1;
+  const uint16_t lcp = 0;
+  const uint16_t lcs = LEN - 1;
   const char *chr = pat_->chr_;
-  size_t min = pat_->min_;
+  const size_t min = pat_->min_;
   while (true)
   {
     const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_ + lcp - LEN + 1;
+    const char *e = buf_ + end_ + lcp - LEN - min + 1;
     __m512i vlcp = _mm512_set1_epi8(chr[lcp]);
     __m512i vlcs = _mm512_set1_epi8(chr[lcs]);
     while (s <= e - 64)
@@ -149,16 +164,16 @@ bool Matcher::simd_advance_chars_pma_avx512bw(size_t loc)
       __m512i vlcpm = _mm512_loadu_si512(reinterpret_cast<const __m512i*>(s));
       __m512i vlcsm = _mm512_loadu_si512(reinterpret_cast<const __m512i*>(s + lcs - lcp));
       uint64_t mask = _mm512_cmpeq_epi8_mask(vlcp, vlcpm) & _mm512_cmpeq_epi8_mask(vlcs, vlcsm);
-      while (mask != 0)
+      while (REFLEX_UNLIKELY(mask != 0))
       {
         uint32_t offset = ctzl(mask);
         if (LEN == 2 ||
             (LEN == 3 ? s[offset + 1 - lcp] == chr[1] : std::memcmp(s + 1 - lcp + offset, chr + 1, LEN - 2) == 0))
         {
-          loc = s - lcp + offset - buf_;
-          if (loc + LEN + 4 > end_ || pat_->predict_match(&buf_[loc + LEN]))
+          size_t k = s - lcp + offset - buf_;
+          if (k + LEN + 4 > end_ || pat_->predict_match(&buf_[k + LEN]))
           {
-            set_current(loc);
+            set_current(k);
             return true;
           }
         }
@@ -166,30 +181,48 @@ bool Matcher::simd_advance_chars_pma_avx512bw(size_t loc)
       }
       s += 64;
     }
-    s -= lcp;
-    loc = s - buf_;
+    while (s < e)
+    {
+      do
+        s = static_cast<const char*>(std::memchr(s, chr[lcp], e - s));
+      while (s != NULL && s[lcs - lcp] != chr[lcs] && ++s < e);
+      if (s == NULL || s >= e)
+      {
+        s = e;
+        break;
+      }
+      if (LEN == 2 ||
+          (LEN == 3 ? s[1 - lcp] == chr[1] : std::memcmp(s + 1 - lcp, chr + 1, LEN - 1) == 0))
+      {
+        size_t k = s - lcp - buf_;
+        if (k + LEN + 4 > end_ || pat_->predict_match(&buf_[k + LEN]))
+        {
+          set_current(k);
+          return true;
+        }
+      }
+      ++s;
+    }
+    loc = s - lcp - buf_;
     set_current_and_peek_more(loc);
     loc = cur_;
-    if (loc + LEN + min > end_)
+    if (loc + LEN + min > end_ && eof_)
       return false;
-    if (loc + LEN + min + 63 > end_)
-      break;
   }
-  return advance_chars_pma<LEN>(loc);
 }
 
 /// Few chars followed by 4 minimal char pattern
 template<uint8_t LEN>
 bool Matcher::simd_advance_chars_pmh_avx512bw(size_t loc)
 {
-  static const uint16_t lcp = 0;
-  static const uint16_t lcs = LEN - 1;
+  const uint16_t lcp = 0;
+  const uint16_t lcs = LEN - 1;
   const char *chr = pat_->chr_;
   size_t min = pat_->min_;
   while (true)
   {
     const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_ + lcp - LEN + 1;
+    const char *e = buf_ + end_ + lcp - LEN - min + 1;
     __m512i vlcp = _mm512_set1_epi8(chr[lcp]);
     __m512i vlcs = _mm512_set1_epi8(chr[lcs]);
     while (s <= e - 64)
@@ -197,16 +230,16 @@ bool Matcher::simd_advance_chars_pmh_avx512bw(size_t loc)
       __m512i vlcpm = _mm512_loadu_si512(reinterpret_cast<const __m512i*>(s));
       __m512i vlcsm = _mm512_loadu_si512(reinterpret_cast<const __m512i*>(s + lcs - lcp));
       uint64_t mask = _mm512_cmpeq_epi8_mask(vlcp, vlcpm) & _mm512_cmpeq_epi8_mask(vlcs, vlcsm);
-      while (mask != 0)
+      while (REFLEX_UNLIKELY(mask != 0))
       {
         uint32_t offset = ctzl(mask);
         if (LEN == 2 ||
             (LEN == 3 ? s[offset + 1 - lcp] == chr[1] : std::memcmp(s + 1 - lcp + offset, chr + 1, LEN - 2) == 0))
         {
-          loc = s - lcp + offset - buf_;
-          if (loc + LEN + min > end_ || pat_->predict_match(&buf_[loc + LEN], min))
+          size_t k = s - lcp + offset - buf_;
+          if (k + LEN + min > end_ || pat_->predict_match(&buf_[k + LEN], min))
           {
-            set_current(loc);
+            set_current(k);
             return true;
           }
         }
@@ -214,25 +247,43 @@ bool Matcher::simd_advance_chars_pmh_avx512bw(size_t loc)
       }
       s += 64;
     }
-    s -= lcp;
-    loc = s - buf_;
+    while (s < e)
+    {
+      do
+        s = static_cast<const char*>(std::memchr(s, chr[lcp], e - s));
+      while (s != NULL && s[lcs - lcp] != chr[lcs] && ++s < e);
+      if (s == NULL || s >= e)
+      {
+        s = e;
+        break;
+      }
+      if (LEN == 2 ||
+          (LEN == 3 ? s[1 - lcp] == chr[1] : std::memcmp(s + 1 - lcp, chr + 1, LEN - 1) == 0))
+      {
+        size_t k = s - lcp - buf_;
+        if (pat_->predict_match(&buf_[k + LEN], min))
+        {
+          set_current(k);
+          return true;
+        }
+      }
+      ++s;
+    }
+    loc = s - lcp - buf_;
     set_current_and_peek_more(loc);
     loc = cur_;
-    if (loc + LEN + min > end_)
+    if (loc + LEN + min > end_ && eof_)
       return false;
-    if (loc + LEN + min + 63 > end_)
-      break;
   }
-  return advance_chars_pmh<LEN>(loc);
 }
 
 /// Implements AVX512BW string search scheme based on http://0x80.pl/articles/simd-friendly-karp-rabin.html
 bool Matcher::simd_advance_string_avx512bw(size_t loc)
 {
   const char *chr = pat_->chr_;
-  size_t len = pat_->len_;
-  uint16_t lcp = pat_->lcp_;
-  uint16_t lcs = pat_->lcs_;
+  const size_t len = pat_->len_;
+  const uint16_t lcp = pat_->lcp_;
+  const uint16_t lcs = pat_->lcs_;
   while (true)
   {
     const char *s = buf_ + loc + lcp;
@@ -244,43 +295,57 @@ bool Matcher::simd_advance_string_avx512bw(size_t loc)
       __m512i vlcpm = _mm512_loadu_si512(reinterpret_cast<const __m512i*>(s));
       __m512i vlcsm = _mm512_loadu_si512(reinterpret_cast<const __m512i*>(s + lcs - lcp));
       uint64_t mask = _mm512_cmpeq_epi8_mask(vlcp, vlcpm) & _mm512_cmpeq_epi8_mask(vlcs, vlcsm);
-      while (mask != 0)
+      while (REFLEX_UNLIKELY(mask != 0))
       {
         uint32_t offset = ctzl(mask);
         if (std::memcmp(s - lcp + offset, chr, len) == 0)
         {
-          loc = s - lcp + offset - buf_;
-          set_current(loc);
+          size_t k = s - lcp + offset - buf_;
+          set_current(k);
           return true;
         }
         mask &= mask - 1;
       }
       s += 64;
     }
-    s -= lcp;
-    loc = s - buf_;
+    while (s < e)
+    {
+      do
+        s = static_cast<const char*>(std::memchr(s, chr[lcp], e - s));
+      while (s != NULL && s[lcs - lcp] != chr[lcs] && ++s < e);
+      if (s == NULL || s >= e)
+      {
+        s = e;
+        break;
+      }
+      if (std::memcmp(s - lcp, chr, len) == 0)
+      {
+        size_t k = s - lcp - buf_;
+        set_current(k);
+        return true;
+      }
+      ++s;
+    }
+    loc = s - lcp - buf_;
     set_current_and_peek_more(loc);
     loc = cur_;
-    if (loc + len > end_)
+    if (loc + len > end_ && eof_)
       return false;
-    if (loc + len + 63 > end_)
-      break;
   }
-  return advance_string(loc);
 }
 
 /// Implements AVX512BW string search scheme based on http://0x80.pl/articles/simd-friendly-karp-rabin.html
 bool Matcher::simd_advance_string_pma_avx512bw(size_t loc)
 {
   const char *chr = pat_->chr_;
-  size_t len = pat_->len_;
-  size_t min = pat_->min_;
-  uint16_t lcp = pat_->lcp_;
-  uint16_t lcs = pat_->lcs_;
+  const size_t len = pat_->len_;
+  const size_t min = pat_->min_;
+  const uint16_t lcp = pat_->lcp_;
+  const uint16_t lcs = pat_->lcs_;
   while (true)
   {
     const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_ + lcp - len + 1;
+    const char *e = buf_ + end_ + lcp - len - min + 1;
     __m512i vlcp = _mm512_set1_epi8(chr[lcp]);
     __m512i vlcs = _mm512_set1_epi8(chr[lcs]);
     while (s <= e - 64)
@@ -288,15 +353,15 @@ bool Matcher::simd_advance_string_pma_avx512bw(size_t loc)
       __m512i vlcpm = _mm512_loadu_si512(reinterpret_cast<const __m512i*>(s));
       __m512i vlcsm = _mm512_loadu_si512(reinterpret_cast<const __m512i*>(s + lcs - lcp));
       uint64_t mask = _mm512_cmpeq_epi8_mask(vlcp, vlcpm) & _mm512_cmpeq_epi8_mask(vlcs, vlcsm);
-      while (mask != 0)
+      while (REFLEX_UNLIKELY(mask != 0))
       {
         uint32_t offset = ctzl(mask);
         if (std::memcmp(s - lcp + offset, chr, len) == 0)
         {
-          loc = s - lcp + offset - buf_;
-          if (loc + len + 4 > end_ || pat_->predict_match(&buf_[loc + len]))
+          size_t k = s - lcp + offset - buf_;
+          if (k + len + 4 > end_ || pat_->predict_match(&buf_[k + len]))
           {
-            set_current(loc);
+            set_current(k);
             return true;
           }
         }
@@ -304,30 +369,47 @@ bool Matcher::simd_advance_string_pma_avx512bw(size_t loc)
       }
       s += 64;
     }
-    s -= lcp;
-    loc = s - buf_;
+    while (s < e)
+    {
+      do
+        s = static_cast<const char*>(std::memchr(s, chr[lcp], e - s));
+      while (s != NULL && s[lcs - lcp] != chr[lcs] && ++s < e);
+      if (s == NULL || s >= e)
+      {
+        s = e;
+        break;
+      }
+      if (std::memcmp(s - lcp, chr, len) == 0)
+      {
+        size_t k = s - lcp - buf_;
+        if (k + len + 4 > end_ || pat_->predict_match(&buf_[k + len]))
+        {
+          set_current(k);
+          return true;
+        }
+      }
+      ++s;
+    }
+    loc = s - lcp - buf_;
     set_current_and_peek_more(loc);
     loc = cur_;
-    if (loc + len + min > end_)
+    if (loc + len + min > end_ && eof_)
       return false;
-    if (loc + len + min + 63 > end_)
-      break;
   }
-  return advance_string_pma(loc);
 }
 
 /// Implements AVX512BW string search scheme based on http://0x80.pl/articles/simd-friendly-karp-rabin.html
 bool Matcher::simd_advance_string_pmh_avx512bw(size_t loc)
 {
   const char *chr = pat_->chr_;
-  size_t len = pat_->len_;
-  size_t min = pat_->min_;
-  uint16_t lcp = pat_->lcp_;
-  uint16_t lcs = pat_->lcs_;
+  const size_t len = pat_->len_;
+  const size_t min = pat_->min_;
+  const uint16_t lcp = pat_->lcp_;
+  const uint16_t lcs = pat_->lcs_;
   while (true)
   {
     const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_ + lcp - len + 1;
+    const char *e = buf_ + end_ + lcp - len - min + 1;
     __m512i vlcp = _mm512_set1_epi8(chr[lcp]);
     __m512i vlcs = _mm512_set1_epi8(chr[lcs]);
     while (s <= e - 64)
@@ -335,15 +417,15 @@ bool Matcher::simd_advance_string_pmh_avx512bw(size_t loc)
       __m512i vlcpm = _mm512_loadu_si512(reinterpret_cast<const __m512i*>(s));
       __m512i vlcsm = _mm512_loadu_si512(reinterpret_cast<const __m512i*>(s + lcs - lcp));
       uint64_t mask = _mm512_cmpeq_epi8_mask(vlcp, vlcpm) & _mm512_cmpeq_epi8_mask(vlcs, vlcsm);
-      while (mask != 0)
+      while (REFLEX_UNLIKELY(mask != 0))
       {
         uint32_t offset = ctzl(mask);
         if (std::memcmp(s - lcp + offset, chr, len) == 0)
         {
-          loc = s - lcp + offset - buf_;
-          if (loc + len + min > end_ || pat_->predict_match(&buf_[loc + len], min))
+          size_t k = s - lcp + offset - buf_;
+          if (k + len + min > end_ || pat_->predict_match(&buf_[k + len], min))
           {
-            set_current(loc);
+            set_current(k);
             return true;
           }
         }
@@ -351,16 +433,33 @@ bool Matcher::simd_advance_string_pmh_avx512bw(size_t loc)
       }
       s += 64;
     }
-    s -= lcp;
-    loc = s - buf_;
+    while (s < e)
+    {
+      do
+        s = static_cast<const char*>(std::memchr(s, chr[lcp], e - s));
+      while (s != NULL && s[lcs - lcp] != chr[lcs] && ++s < e);
+      if (s == NULL || s >= e)
+      {
+        s = e;
+        break;
+      }
+      if (std::memcmp(s - lcp, chr, len) == 0)
+      {
+        size_t k = s - lcp - buf_;
+        if (pat_->predict_match(&buf_[k + len], min))
+        {
+          set_current(k);
+          return true;
+        }
+      }
+      ++s;
+    }
+    loc = s - lcp - buf_;
     set_current_and_peek_more(loc);
     loc = cur_;
-    if (loc + len + min > end_)
+    if (loc + len + min > end_ && eof_)
       return false;
-    if (loc + len + min + 63 > end_)
-      break;
   }
-  return advance_string_pmh(loc);
 }
 
 #else

@@ -4,10 +4,10 @@ RE/flex user guide                                                  {#mainpage}
                                                                @tableofcontents
 
 
-  "The asteroid to kill this dinosaur is still in orbit."  -- Lex Manual
+  "The asteroid to kill this dinosaur is still in orbit."         -- Lex Manual
 
-  "Reflex: a thing that is determined by and reproduces
-   the essential features or qualities of something else." -- Oxford Dictionary
+  "Reflex: a thing that is determined by and reproduces the
+   essential features or qualities of something else."     -- Oxford Dictionary
 
 
 What is RE/flex?                                                       {#intro}
@@ -16,20 +16,29 @@ What is RE/flex?                                                       {#intro}
 A high-performance C++ regex library and a lexical analyzer generator like
 Flex and Lex.
 
-The RE/flex lexical analyzer generator extends Flex++ with Unicode support
-and many other useful features, such as regex indentation anchors, regex lazy
-quantifiers, regex word boundaries, methods for error reporting and recovery,
-and options to simplify integration with with Bison and other parsers.
+Firstly, the high-performance RE/flex regex engine internally builds finite
+state machine tables or generates direct code to scan and search input
+efficiently.
+
+RE/flex also supports other regex engines under the same uniform C++ class API,
+namely RE/flex with fuzzy matching, the PCRE2 library, the Boost.Regex library,
+and std::regex.
+
+This uniform API implements pattern matching on files, streams, strings, and
+memory directly.  Input is internally buffered in a window so that very large
+files can be searched.  File encodings are normalized to UTF-8 to apply UTF-8
+Unicode regex pattern matching.
+
+Secondly, the RE/flex lexical analyzer generator extends Flex++ with Unicode
+support and many new useful features, such as regex indentation anchors, regex
+lazy quantifiers, regex word boundaries, methods for error reporting and
+recovery, and new options to simplify integration with with Bison and other
+parsers.
 
 The RE/flex lexical analyzer generator does all the heavy-lifting for you to
 make it easier to integrate advanced tokenizers with Bison and other parsers.
 It generates the necessary gluing code depending on the type of Bison parser
 used, such as advanced "Bison complete parsers".
-
-The high-performance RE/flex regex library generates finite state machine
-tables or direct code to scan and search input efficiently.  RE/flex also
-includes a smart input class to normalize input from files, streams, strings,
-and memory to standard UTF-8 streams.
 
 In a nutshell, the RE/flex lexical analyzer generator
 
@@ -305,25 +314,34 @@ and splitting input from strings, files and streams in regular C++ applications
 🔝 [Back to table of contents](#)
 
 
-A flexible regex library                                              {#intro2}
-------------------------
+Flexible high-performance regex classes                               {#intro2}
+---------------------------------------
 
-The RE/flex regex pattern matching classes include two classes for Boost.Regex,
-two classes for PCRE2, two classes for C++11 std::regex, and a RE/flex class:
+The regex pattern matching C++ classes include the high-performance RE/flex
+regex engine, the RE/flex fuzzy matching engine, classes for Boost.Regex,
+classes for PCRE2, and classes for C++11 std::regex:
 
   Engine        | Header file to include  | C++ matcher classes
   ------------- | ----------------------- | -----------------------------------
-  RE/flex regex | `reflex/matcher.h`      | `Matcher`
-  PCRE2         | `reflex/pcre2matcher.h` | `PCRE2Matcher`, `PCRE2UTFMatcher`
-  Boost.Regex   | `reflex/boostmatcher.h` | `BoostMatcher`, `BoostPosixMatcher`
-  std::regex    | `reflex/stdmatcher.h`   | `StdMatcher`, `StdPosixMatcher`
+  RE/flex regex | `reflex/matcher.h`      | `reflex::Matcher`
+  RE/flex regex | `reflex/fuzzymatcher.h` | `reflex::FuzzyMatcher`
+  PCRE2         | `reflex/pcre2matcher.h` | `reflex::PCRE2Matcher`, `reflex::PCRE2UTFMatcher`
+  Boost.Regex   | `reflex/boostmatcher.h` | `reflex::BoostMatcher`, `reflex::BoostPerlMatcher`, `reflex::BoostPosixMatcher`
+  std::regex    | `reflex/stdmatcher.h`   | `reflex::StdMatcher`, `reflex::StdEcmaMatcher`, `reflex::StdPosixMatcher`
 
 The RE/flex `reflex::Matcher` class compiles regex patterns to efficient
 non-backtracking deterministic finite state machines (FSM) when instantiated.
 These deterministic finite automata (DFA) representations speed up matching
 considerably, at the cost of the initial FSM construction (see further below
-for hints on how to avoid this run time overhead).  RE/flex matchers only
-support POSIX mode matching, see \ref reflex-posix-perl.
+for hints on how to avoid this run-time overhead).  RE/flex matchers use POSIX
+mode matching, see \ref reflex-posix-perl for details.
+
+The RE/flex `reflex::FuzzyMatcher` class derived from `reflex::Matcher`
+supports the same features as the `reflex::Matcher` class but performs
+approximate regex pattern matching.  The constructor accepts an optional second
+parameter that specifies the "edit distance" for approximate matching.  Pattern
+search is not as efficient as the `reflex::Matcher` class that uses SIMD
+acceleration to speed up search for the `find()` method.
 
 The `reflex::PCRE2Matcher` and `reflex::PCRE2UTFMatcher` classes are for
 efficient Perl mode matching with PCRE2 using JIT (just-in-time compilation),
@@ -332,13 +350,15 @@ The PCRE2 matchers use JIT optimizations to speed up matching, which comes at a
 cost of extra processing when the matcher is instantiated.  The benefit
 outweighs the cost when many matches are processed.
 
-The `reflex::BoostMatcher` and `reflex::BoostPosixMatcher` classes are for Perl
-mode and POSIX mode matching using the Boost Regex library, respectively.
+The `reflex::BoostMatcher`, `reflex::BoostPerlMatcher`, and
+`reflex::BoostPosixMatcher` classes are for default mode, Perl mode, and POSIX
+mode matching using the Boost Regex library, respectively.
 
 C++11 std::regex supports ECMAScript and AWK POSIX syntax with the `StdMatcher`
-and `reflex::StdPosixMatcher` classes respectively.  The std::regex syntax is
-therefore a lot more limited compared to PCRE2, Boost.Regex, and RE/flex.
-These regex matchers are considerably slower compared to the other matchers.
+(or `StdEcmaMatcher`) and `reflex::StdPosixMatcher` classes respectively.  The
+std::regex syntax is therefore a lot more limited compared to PCRE2,
+Boost.Regex, and RE/flex.  These regex matchers are considerably slower
+compared to the other matchers.
 
 The RE/flex regex common interface API is implemented in an abstract base class
 template `reflex::AbstractMatcher` from which all regex matcher engine classes
@@ -371,9 +391,7 @@ For example, to check if a string is a valid date using Boost.Regex:
       std::cout << "Valid date!" << std::endl;
 ~~~
 
-We can perform exactly the same check with PCRE2 instead of Boost.Regex.
-However, the JIT-optimized PCRE2 matcher is better suited when many matches are
-processed, not just one as shown here:
+We can perform exactly the same check with PCRE2 instead of Boost.Regex:
 
 ~~~{.cpp}
     #include <reflex/pcre2matcher.h> // reflex::PCRE2Matcher, reflex::Input
@@ -382,6 +400,9 @@ processed, not just one as shown here:
     if (reflex::PCRE2Matcher("\\d{4}-\\d{2}-\\d{2}", birthdate).matches())
       std::cout << "Valid date!" << std::endl;
 ~~~
+
+The JIT-optimized PCRE2 matcher is better suited when many matches are
+performed on multiple inputs, not just one match as shown above.
 
 Swapping regex libraries is simple.  Sometimes we may need a regex converter
 when a regex feature is used that the regex library does not support.
@@ -504,23 +525,32 @@ When executed this code prints:
 
 The regex engines currently available as classes in the `reflex` namespace are:
 
-  Class               | Mode  | Engine        | Performance
-  ------------------- | ----- |-------------- | ---------------------------------
-  `Matcher`           | POSIX | RE/flex lib   | deterministic finite automaton, no backtracking
-  `PCRE2Matcher`      | Perl  | PCRE2         | JIT-optimized backtracking
-  `PCRE2UTFMatcher`   | Perl  | PCRE2 UTF+UPC | JIT-optimized backtracking
-  `BoostMatcher`      | Perl  | Boost.Regex   | backtracking
-  `BoostPerlMatcher`  | Perl  | Boost.Regex   | backtracking
-  `BoostPosixMatcher` | POSIX | Boost.Regex   | backtracking
-  `StdMatcher`        | ECMA  | std::regex    | backtracking
-  `StdEcmaMatcher`    | ECMA  | std::regex    | backtracking
-  `StdPosixMatcher`   | POSIX | std::regex    | backtracking
+  Class                       | Mode  | Engine        | Performance
+  --------------------------- | ----- |-------------- | ---------------------------------
+  `reflex::Matcher`           | POSIX | RE/flex       | FSM, no backtracking
+  `reflex::FuzzyMatcher`      | POSIX | RE/flex       | FSM, minimal backtracking (fuzzy)
+  `reflex::PCRE2Matcher`      | Perl  | PCRE2         | JIT-optimized backtracking
+  `reflex::PCRE2UTFMatcher`   | Perl  | PCRE2 UTF+UPC | JIT-optimized backtracking
+  `reflex::BoostMatcher`      | Perl  | Boost.Regex   | backtracking
+  `reflex::BoostPerlMatcher`  | Perl  | Boost.Regex   | backtracking
+  `reflex::BoostPosixMatcher` | POSIX | Boost.Regex   | backtracking
+  `reflex::StdMatcher`        | ECMA  | std::regex    | backtracking
+  `reflex::StdEcmaMatcher`    | ECMA  | std::regex    | backtracking
+  `reflex::StdPosixMatcher`   | POSIX | std::regex    | backtracking
 
 The RE/flex regex engine uses a deterministic finite state machine (FSM) to get
 the best performance when matching.  However, constructing a FSM adds overhead.
 This matcher is better suitable for searching long texts.  The FSM construction 
 overhead can be eliminated by pre-converting the regex to C++ code tables ahead
-of time as we will see shortly.
+of time as we will see shortly.  RE/flex fuzzy matching may require minimal
+backtracking for approximate pattern matches to find a minimal, but not
+necessarily optimal (!), "edit distance" from an exact match.
+
+The PCRE2 engines use Perl mode matching.  PCRE2 also offers POSIX mode
+matching with `pcre2_dfa_match()`.  However, group captures are not supported
+in this mode.  Therefore, no PCRE2 POSIX mode class is included as a choice.
+JIT optimizations speed up matching.  However, this comes at a cost of extra
+processing when the PCRE2 matcher class is instantiated.
 
 The Boost.Regex engines normally use Perl mode matching.  We added a POSIX mode
 Boost.Regex engine class for the RE/flex scanner generator.  Scanners typically
@@ -529,12 +559,6 @@ use POSIX mode matching.  See \ref reflex-posix-perl for more information.
 The Boost.Regex engines are all initialized with `match_not_dot_newline`, which
 disables dotall matching as the default setting.  Dotall can be re-enabled with
 the `(?s)` regex mode modifier.  This is done for compatibility with scanners.
-
-The PCRE2 engines use Perl mode matching.  PCRE2 also offers POSIX mode
-matching with `pcre2_dfa_match()`.  However, group captures are not supported
-in this mode.  Therefore, no PCRE2 POSIX mode class is included as a choice.
-JIT optimizations speed up matching.  However, this comes at a cost of extra
-processing when the PCRE2 matcher class is instantiated.
 
 A matcher may be applied to strings and wide strings, such as `std::string` and
 `std::wstring`, `char*` and `wchar_t*`.  Wide strings are converted to UTF-8 to
@@ -1661,18 +1685,28 @@ reached.  For `int` this is `int()`, which is zero.  By setting
 
 #### `-d`, `−−debug`
 
-This enables debug mode in the generated scanner.  Running the scanner produces
-debug messages on `std::cerr` standard error and the `debug()` function returns
-nonzero.  To temporarily turn off debug messages, use `set_debug(0)` in your
-action code.  To turn debug messages back on, use `set_debug(1)`.  The
-`set_debug()` and `debug()` methods are virtual methods of the lexer class, so
-you can override their behavior in a derived lexer class.  This option also
-enables assertions that check for internal errors.  See \ref reflex-debug for
-details.
+This option enables debug mode in the generated scanner.  Running the scanner
+produces debug messages on `std::cerr` standard error and the `debug()`
+function returns nonzero.  To temporarily turn off debug messages, use
+`set_debug(0)` in your action code.  To turn debug messages back on, use
+`set_debug(1)`.  The `set_debug()` and `debug()` methods are virtual methods of
+the lexer class, so you can override their behavior in a derived lexer class.
+This option also enables assertions that check for internal errors.  See \ref
+reflex-debug for details.
+
+#### `-D [START:]FILE`, `--do=[START:]FILE`
+
+This option immediately tests the lexer rule patterns against the specified
+input `FILE`.  No scanner code is generated.  The debug messages output by this
+option are identical to option `-d` messages output by the generated and
+compiled scanner when executed on the input `FILE`.  Only a single start
+condition state is active and never changed during scanning, because the
+scanner's lexer actions are not actually executed.  The start condition is 0 (or
+`INITIAL`) by default.
 
 #### `-p`, `−−perf-report`
 
-This enables the collection and reporting of statistics by the generated
+This option enables the collection and reporting of statistics by the generated
 scanner.  The scanner reports the performance statistics on `std::cerr` when
 EOF is reached.  If your scanner does not reach EOF, then invoke the lexer's
 `perf_report()` method explicitly in your code.  Invoking this method also
@@ -1682,13 +1716,13 @@ details.
 
 #### `-s`, `−−nodefault`
 
-This suppresses the default rule that echoes all unmatched input text when no
-rule matches.  With the `−−flex` option, the scanner reports "scanner jammed"
-when no rule matches by calling `yyFlexLexer::LexerError("scanner jammed")`.
-Without the `−−flex` and `−−debug` options, a `std::runtime` exception is
-raised by invoking `AbstractLexer::lexer_error("scanner jammed")`.  To throw a
-custom exception instead, use option `−−exception` or override the virtual
-method `lexer_error` in a derived lexer class.  The virtual methods
+This option suppresses the default rule that echoes all unmatched input text
+when no rule matches.  With the `−−flex` option, the scanner reports "scanner
+jammed" when no rule matches by calling `yyFlexLexer::LexerError("scanner
+jammed")`.  Without the `−−flex` and `−−debug` options, a `std::runtime`
+exception is raised by invoking `AbstractLexer::lexer_error("scanner jammed")`.
+To throw a custom exception instead, use option `−−exception` or override the
+virtual method `lexer_error` in a derived lexer class.  The virtual methods
 `LexerError` and `lexer_error` may be redefined by a user-specified derived
 lexer class, see \ref reflex-inherit.  Without the `−−flex` option, but with
 the `−−debug` option, the default rule is suppressed without invoking
@@ -1697,11 +1731,11 @@ the `−−debug` option, the default rule is suppressed without invoking
 
 #### `-v`, `−−verbose`
 
-This displays a summary of scanner statistics.
+This option displays a summary of scanner statistics.
 
 #### `-w`, `−−nowarn`
 
-This disables warnings.
+This option disables warnings.
 
 🔝 [Back to table of contents](#)
 
@@ -1709,11 +1743,11 @@ This disables warnings.
 
 #### `-h`, `−−help`
 
-This displays helpful information about <b>`reflex`</b>.
+This option displays helpful information about <b>`reflex`</b>.
 
 #### `-V`, `−−version`
 
-This displays the current <b>`reflex`</b> release version.
+This option displays the current <b>`reflex`</b> release version.
 
 #### `−−yylineno`, `−−yymore`
 
@@ -3631,8 +3665,8 @@ To enable case-insensitive mode in <b>`reflex`</b> use the `-i` or
 Prepend `(?i)` to the regex to specify case-insensitive mode or use `(?i:φ)` to
 locally enable case-insensitive mode in the sub-pattern `φ`.  Use `(?-i:φ)` to
 locally disable case-insensitive mode in `φ`.  The regex pattern may require
-conversion when the regex library does not support case-insensitive mode
-modifiers, see \ref regex-convert for more details.
+conversion when the regex library does not support non-ASCII Unicode
+case-insensitive mode modifiers, see \ref regex-convert for more details.
 
 🔝 [Back to table of contents](#)
 
@@ -6052,11 +6086,17 @@ There are several <b>`reflex`</b> options to debug a lexer and analyze its
 performance given some input text to scan:
 
 - Option `-d` (or `−−debug`) generates a scanner that prints the matched text,
-  which allows you to debug your patterns.
+  which allows you to debug your lexer patterns.
+
+- Option `-D [START:]FILE` (or `−−do=[START:]FILE`) does not generate a
+  scanner, but immediately prints the matched text by matching the lexer
+  patterns against the specified input `FILE`.  This option allows you to debug
+  your patterns immediately.  An optional `START` condition state of the rules
+  may be specified, which is 0 (or `INITIAL`) by default.
 
 - Option `-p` (or `−−perf-report`) generates a scanner that profiles the
   performance of your lexer and the lexer rules executed, which allows you to
-  find hotspots and performance bottlenecks in your rules.
+  find hotspots and performance bottlenecks in your lexer.
 
 - Option `-s` (or `−−nodefault`) suppresses the default rule that echoes all
   unmatched text when no rule matches.  The scanner reports "scanner jammed"
@@ -6069,13 +6109,18 @@ performance given some input text to scan:
 
 ### Debugging
 
-Option `-d` generates a scnner that prints the matched text while scanning
+Option `-d` generates a scanner that prints the matched text while scanning
 input.  The output displayed is of the form:
 
-    −−accepting rule at line NNN ("TEXT")
+    −−rule FILE:LINE start(START) LINE,COLUMN:"TEXT"
 
-where NNN is the line number of the pattern in the lexer specification and TEXT
-is the matched text.
+where `FILE:LINE` is the source location of the lexer rule, `START` is the
+start condition state, `LINE,COLUMN` is the line and column number of the
+pattern match in the input, and `TEXT` is the matched text.
+
+Option `-D [START:]FILE` immediately debugs the lexer patterns on the specified
+input `FILE`.  The start condition state `START` is not changed during
+scanning, because the scanner's lexer actions are not actually executed.
 
 🔝 [Back to table of contents](#)
 
@@ -6096,7 +6141,7 @@ This is perhaps best illustrated with an example.  The JSON parser
 package was built with reflex option `-p` and then run on some given JSON input
 to analyze its performance:
 
-    reflex 0.9.22 json.l performance report:
+    reflex x.y.z json.l performance report:
       INITIAL rules matched:
         rule at line 51 accepted 58 times matching 255 bytes total in 0.009 ms
         rule at line 52 accepted 58 times matching 58 bytes total in 0.824 ms
@@ -6823,8 +6868,8 @@ as regex texts are internally compiled into deterministic finite state machines
 by the `reflex::Pattern` class.  The machines are used by the `reflex::Matcher`
 for fast matching of regex patterns on some given input.  The `reflex::Matcher`
 is faster than the PCRE2 and Boost.Regex matchers.  The `reflex::FuzzyMatcher`
-subclass is included and performs approximate pattern matching, see the
-[FuzzyMatcher readme](https://github.com/Genivia/FuzzyMatcher).
+subclass is included and performs approximate regex pattern matching, see
+\ref regex-fuzzy-matcher.
 
 A `reflex::Matcher` engine is constructed from a `reflex::Pattern` object, or a
 string regex, and some given input:
@@ -6835,8 +6880,9 @@ string regex, and some given input:
     reflex::Matcher matcher( reflex::Pattern or string, reflex::Input [, "options"] )
 ~~~
 
-The regex is specified as a string or a `reflex::Pattern` object, see
-\ref regex-pattern below.
+The regex is specified as a string or a `reflex::Pattern` object.  The
+`reflex::Pattern` object is passed by referene and must persist when the
+matcher is in use.  See also \ref regex-pattern below.
 
 We use option `"N"` to permit empty matches when searching input with
 `reflex::Matcher::find`.  Option `"T=8"` sets the tab size to 8 for
@@ -6876,13 +6922,116 @@ See \ref regex-convert for more details on regex converters.
 🔝 [Back to table of contents](#)
 
 
+The reflex::FuzzyMatcher class                           {#regex-fuzzy-matcher}
+------------------------------
+
+The `reflex::FuzzyMatcher` class is derived from `reflex::Matcher` to support
+approximate regex pattern matching.  The approximation error is contrained by
+an "edit distance" which is one by default.  The edit distance is also called
+[Levenshstein distance](https://en.wikipedia.org/wiki/Levenshtein_distance).
+Instantiating a `reflex::FuzzyMatcher` takes an optional `MAX` paramter to
+contrain the edit distance permitted:
+
+~~~{.cpp}
+    #include <reflex/fuzzymatcher.h>
+
+    reflex::FuzzyMatcher matcher( reflex::Pattern or string, [MAX, ] reflex::Input [, "options"] )
+~~~
+
+The regex is specified as a string or a `reflex::Pattern` object.  The
+`reflex::Pattern` object is passed by referene and must persist when the
+matcher is in use.  See also \ref regex-pattern below.
+
+The instantiated `reflex::FuzzyMatcher` class supports the same methods and
+features as the `reflex::Matcher` class, but with approximate pattern matching.
+
+When a `MAX` edit distance parameter is specified, it may be combined with one
+or more of the following flags:
+
+- `reflex::FuzzyMatcher::INS` insertions permit extra character(s) in the input
+- `reflex::FuzzyMatcher::DEL` deletions permit missing character(s) in the input
+- `reflex::FuzzyMatcher::SUB` substitutions count as one edit
+- `reflex::FuzzyMatcher::BIN` ASCII/binary fuzzy matching, the default is Unicode (full Unicode matching requires the Unicode pattern converter shown further below)
+
+For example, to allow approximate pattern matches to include up to three character insertions, but no deletions or substitutions (allowing insertions only is actually the most efficient fuzzy matching possible):
+
+~~~{.cpp}
+    reflex::FuzzyMatcher matcher(regex, 3 | reflex::FuzzyMatcher::INS, input);
+~~~
+
+To allow up to three insertions or deletions (note that a substitution counts
+as two edits: one insertion and one deletion):
+
+~~~{.cpp}
+    reflex::FuzzyMatcher matcher(regex, 3 | reflex::FuzzyMatcher::INS | reflex::FuzzyMatcher::DEL, input);
+~~~
+
+When no flags are specified with `MAX`, fuzzy matching is performed with
+insertions, deletions, and substitutions, each counting as one edit.  Newlines
+(`\n`) and NUL (`\0`) characters are never deleted or substituted to ensure
+that fuzzy matches do not extend the pattern match beyond the number of lines
+specified by the regex pattern
+
+To support full Unicode fuzzy pattern matching, such as `\p` Unicode character
+classes, we first convert the regex pattern before using it as follows:
+
+~~~{.cpp}
+    std::string regex(reflex::Matcher::convert("PATTERN", reflex::convert_flag::unicode));
+    reflex::FuzzyMatcher matcher(regex, [MAX,] reflex::Input [, "options"] );
+~~~
+
+Fuzzy `find()` and `split()` perform a second pass over a fuzzy-matched pattern
+when the match has a nonzero error.  This second pass checks if an exact match
+exists or if a better match exists that overlaps with the first pattern found.
+
+For example, the pattern `abc` is found to fuzzy match all of the text `aabc`
+with one error (an extra `a`).  The second pass of `find()` detects an exact
+match after skipping the first `a`.  Likewise, the pattern `abc` is found to
+fuzzy match `ababc` with a match for `aba` with one error (substitution of `c`
+by an `a`).  The second pass of `find()` detects an exact match after skipping
+`ab` in the text.  This approach is faster than minimizing the edit distance
+when searching text, while returning exact matches when possible.
+
+After a succesful fuzzy match or search with `matches()`, `scan()`, `find()` or
+`split()`, the method `reflex::FuzzyMatcher::edits()` returns the edit distance
+of the approximate pattern match, which is zero for an exact match.
+
+The first character of the pattern must match when searching a corpus with the
+fuzzy `find()` method:
+
+  Pattern    | MAX | Fuzzy find matches these ...      | ... but not these
+  ---------- | --- | --------------------------------- | -------------------------
+  `abc`      | 1   | `abc`, `ab`, `ac`, `axc`, `axbc`  | `a`, `axx`, `axbxc`, `bc`
+  `año`      | 1   | `año`, `ano`, `ao`                | `anno`, `ño`
+  `ab_cd`    | 2   | `ab_cd`, `ab-cd`, `ab Cd`, `abCd` | `ab\ncd`, `Ab_cd`, `Abcd`
+  `a[0-9]+z` | 1   | `a1z`, `a123z`, `az`, `axz`       | `axxz`, `A123z`, `123z`
+
+Note that we can use `.` as the first character or make the first character
+optional with `?` to "match fuzzily".
+
+By contrast, the fuzzy `matches()` method to match a corpus from start to end
+does not have this requirement:
+
+  Pattern    | MAX | Fuzzy matches these ...                              | ... but not these
+  ---------- | --- | ---------------------------------------------------- | -------------------------
+  `abc`      | 1   | `abc`, `ab`, `ac`, `Abc`, `xbc` `bc`, `axc`, `axbc`  | `a`, `axx`, `Ab`, `axbxc`
+  `año`      | 1   | `año`, `Año`, `ano`, `ao`, `ño`                      | `anno`
+  `ab_cd`    | 2   | `ab_cd`, `Ab_Cd`, `ab-cd`, `ab Cd`, `Ab_cd`, `abCd`  | `ab\ncd`, `AbCd`
+  `a[0-9]+z` | 1   | `a1z`, `A1z`, `a123z`, `az`, `Az`, `axz`, `123z`     | `axxz`
+
+Note that quoting text in patterns with `\Q` and `\E` fuzzy-matches the text.
+It does not escape fuzzy matching.
+
+🔝 [Back to table of contents](#)
+
 The reflex::Pattern class                                      {#regex-pattern}
 -------------------------
 
-The `reflex::Pattern` class is used by the `reflex::matcher` for pattern
-matching.  The `reflex::Pattern` class converts a regex pattern to an efficient
-FSM and takes a regex string and options to construct the FSM internally.
-The pattern instance is passed to a `reflex::Matcher` constructor:
+The `reflex::Pattern` class is used by `reflex::Matcher` and
+`reflex::FuzzyMatcher` for pattern matching.  The `reflex::Pattern` class
+converts a regex pattern to an efficient FSM and takes a regex string and
+options to construct the FSM internally.  The pattern instance is passed to a
+`reflex::Matcher` constructor:
 
 ~~~{.cpp}
     #include <reflex/matcher.h>
@@ -6892,7 +7041,9 @@ The pattern instance is passed to a `reflex::Matcher` constructor:
     reflex::Matcher matcher(pattern, reflex::Input [, "options"] )
 ~~~
 
-It may also be used to replace a matcher's current pattern, see \ref intro2.
+The `reflex::Pattern` object is passed by referene and must persist when the
+matcher is in use.  A new `reflex::Pattern` object may also be used to replace
+a matcher's current pattern at any time, see \ref intro2.
 
 To improve performance, it is recommended to create a `static` instance of the
 pattern if the regex string is fixed.  This avoids repeated FSM construction at
@@ -9004,15 +9155,15 @@ On using setlocale                                                 {#setlocale}
 The RE/flex scanners and regex matchers use an internal buffer with UTF-8
 encoded text content to scan wide strings and UTF-16/UTF-32 input.  This means
 that Unicode input is normalized to UTF-8 prior to matching.  This internal
-conversion is independent of the current C locale and is performed
-automatically by the `reflex::Input` class that passes the UTF-8-normalized
-input to the matchers.
+conversion is independent of the current locale and is performed automatically
+by the `reflex::Input` class that passes the UTF-8-normalized input to the
+matchers.
 
 Furthermore, RE/flex lexers may invoke the `wstr()`, `wchr()`, and `wpair()`
 methods to extract wide string and wide character matches.  These methods are
-also independent of the current C locale.
+also independent of the current locale.
 
-This means that setting the C locale in an application will not affect the
+This means that setting the locale in an application will not affect the
 performance of RE/flex scanners and regex matchers.
 
 As a side note, to display wide strings properly and to save wide strings to
@@ -9208,7 +9359,7 @@ If you need to read a file or stream again, you have two options:
 
 1. Save the current matcher and its input state with `push_matcher(m)` or
    `yypush_buffer_state(m)` to start using a new matcher `m`, e.g. created
-   with `Matcher m = new_matcher(i)` to consume the specified input `i`.
+   with `reflex::Matcher m = new_matcher(i)` to consume the specified input `i`.
    Restore the original matcher with `pop_matcher()` or `yypop_buffer_state()`.
    See also \ref reflex-multiple-input.
 
@@ -9340,74 +9491,92 @@ example:
 🔝 [Back to table of contents](#)
 
 
-Registering a handler to support non-blocking reads                 {#nonblock}
----------------------------------------------------
+Registering a handler to support (non-)blocking reads               {#nonblock}
+-----------------------------------------------------
 
-When `FILE*` input is read, the read operation performed with an `fread` by the
-`reflex::Input` class should normally block until data is available.
-Otherwise, when no data is available, an EOF condition is set and further reads
-are blocked.
+This section is updated.  RE/flex 5.4 and greater support non-blocking `FILE*`
+input by waiting until input becomes available.  For this to work, the
+`reflex::Input::Handler::operator()()` method has completely changed in RE/flex
+5.4.  When a custom handler is defined, it is always invoked after a `FILE*`
+read.  The handler can be used to inspect the input before being passed on to
+the regex matcher.  It can be used to update an in-progress bar in a dialog
+window, for example.  It can be used to control non-blocking input, including
+exiting with EOF when a time out occurs.
 
-To support error recovery and non-blocking `FILE*` input, an event handler
-can be registered.  This handler is invoked when no input is available (i.e.
-`fread` returns zero) and the end of the file is not reached yet (i.e. `feof()`
-returns zero).
-
-The handler should be derived from the `reflex::Inout::Handler` abstract base
-functor class as follows:
+The input handler is derived from the `reflex::Input::Handler` abstract base
+class as follows:
 
 ~~~{.cpp}
-    struct NonBlockHandler : public reflex::Input::Handler {
-      NonBlockHandler(State& state)
+    struct MyHandler : public reflex::Input::Handler {
+      MyHandler(State& state)
       :
         state(state)
       { }
 
-      // state info: the handler does not need to be stateless
-      // for example this can be the FILE* or reflex::Input object
+      // state info: the handler can be stateful with your data as needed
       State& state;
 
-      // the functor operator invoked by the reflex::Input class when fread()==0 and feof()==0
-      int operator()()
+      // the functor operator invoked by reflex::Input
+      int operator()(
+        FILE *file, // open file
+        char *buf,  // pointer to buffer with data read from file, may be changed by handler
+        size_t len  // length of the buffered data, should be returned by the functor, or shorter to ignore or zero to force EOF and stop reading
+        )
       {
-        ... // perform some operation here
-
-        return 0; // do not continue, signals end of input
-        return 1; // continue reading, which may fail again
+        if (len == 0)
+        {
+          // zero len, no input is available on a non-blocking file or reached EOF
+          if (...)
+            return 0; // do nothing: wait until input is available, end when EOF
+          errno = ...; // some error condition != EAGAIN, EWOULDBLOCK, EINTR
+          return 0; // force EOF with errno
+        }
+        else
+        {
+          // can inspect buf[] here, return len or less to pass on to the regex matcher
+          return len;
+        }
       }
     };
 ~~~
 
-When your event handler allows non-blocking reads to continue, make sure that
-your handler does not return nonzero without delay.  A busy loop is otherwise
-the result that unnecessarily burns CPU cycles.  Instead of a fixed delay,
-`select()` can be effectively used to wait for input to become ready again:
+When `len` is zero, no input could be read on a non-blocking `FILE*`.  This may
+be temporary or an actual EOF.  A blocking `FILE*` always has a zero `len` on
+EOF.  Returning zero from the handler will let `reflex::Input` wait
+indefinitely until input becomes available or stops reading on EOF.
+
+If a timeout is desired, then this can be implemented in the custom handler as
+follows:
 
 ~~~{.cpp}
-    while (true)
+    if (len == 0 && !feof(file_))
     {
-      struct timeval tv;
-      fd_set fds;
-      FD_ZERO(&fds);
-      int fd = fileno(in.file());
-      FD_SET(fd, &fds);
-      tv.tv_sec = 1;
-      tv.tv_usec = 0;
-      int r = ::select(fd + 1, &fds, NULL, &fds, &tv);
-      if (r < 0 && errno != EINTR)
-        return 0;
-      if (r > 0)
-        return 1;
+      int timeout = 10; // 10 seconds timeout
+      for (int seconds = 0; seconds < timeout; ++seconds)
+      {
+        struct timeval tv;
+        fd_set rfds, efds;
+        FD_ZERO(&rfds);
+        FD_ZERO(&efds);
+        FD_SET(0, &rfds);
+        FD_SET(0, &efds);
+        tv.tv_sec = 1; // wait one second or until input is available
+        tv.tv_usec = 0;
+        int r = ::select(fileno(file_) + 1, &rfds, NULL, &efds, &tv);
+        if (r < 0 && errno != EINTR)
+          return 0; // errno is set
+        if (r > 0)
+          return 0; // OK
+      }
+      errno = ETIMEDOUT; // indicate EOF with errno ETIMEDOUT
     }
+    return len;
 ~~~
 
-Here we wait in periods of one second until data is pending on the `FILE*`
-stream `in.file()`, where `in` is a `reflex::Input` object.  This object can
-be part of the `NonBlockHandler` state.  A timeout can be implemented by
-bounding the number of loop iterations.
-
-Note that a `FILE*` stream is set to non-blocking mode in Unix/Linux with
-`fcntl()`.  Your handler is registered with `reflex::Input::set_handler()`:
+A `FILE*` stream is set to non-blocking mode in Unix/Linux with `fcntl()`.
+A custom handler is registered with `reflex::Input::set_handler()` and removed
+with a `NULL` handler (when new input is assigned, a handler is always
+removed):
 
 ~~~{.cpp}
     #include <fcntl.h>
@@ -9416,16 +9585,20 @@ Note that a `FILE*` stream is set to non-blocking mode in Unix/Linux with
     int fd = fileno(file);
     fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
     reflex::Input in(file);
-    NonBlockHandler nonblock_handler(in);
-    in.set_handler(&nonblock_handler);
+    MyHandler handler();
+    in.set_handler(&handler); // define handler
     ...
     fclose(in.file());
+    in.set_handler(NULL); // remove handler
 ~~~
 
 The custom event handler can also be used to detect and clear `FILE*` errors by
 checking if an error conditions exist on the `FILE*` input indicated by
-`ferror()`.  Errors are cleared with `clearerr()`.  Note that a non-blocking
-read that returns zero always produces nonzero `ferror()` values.
+`ferror()`.  When the handler functor returns zero, it indicates EOF and the
+remaining input is ignored.
+
+@note This feature is not available for MS Windows-compiled code, it assumes
+Unix/Linux with `fcntl()` non-blocking.
 
 🔝 [Back to table of contents](#)
 
@@ -9500,7 +9673,7 @@ This compiles the code *without SIMD optimizations*, despite compiling
 `lib/simd.cpp`.  SIMD intrinsics for SSE/AVX and ARM NEON/AArch64 are used to
 speed up string search and newline detection and counting in the library.
 These optimizations are for the most part applicable to speed up searching with
-the `Matcher::find()` method.
+the `reflex::Matcher::find()` method.
 
 To compile with NEON/AArch64 optimizations applied (omit `-mfpu=neon` for AArch64):
 
@@ -9690,4 +9863,4 @@ The Free Software Foundation maintains a
 
 🔝 [Back to table of contents](#)
 
-Copyright (c) 2016,2024, Robert van Engelen.  All rights reserved.
+Copyright (c) 2016-2025, Robert van Engelen.  All rights reserved.

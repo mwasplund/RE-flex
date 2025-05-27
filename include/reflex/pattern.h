@@ -367,7 +367,7 @@ class Pattern {
   {
     return ams_;
   }
-  /// Returns true when match is predicted, based on s[0..3..e-1] (e >= s + 4).
+  /// Returns true when match is predicted, based on s[0..3..e-1] (e >= s + 4 and n >= 4).
   inline bool predict_match(const char *s, size_t n) const
   {
     uint32_t h = static_cast<uint8_t>(*s);
@@ -541,10 +541,10 @@ class Pattern {
   typedef std::map<Position,Positions> Follow;
   typedef std::pair<Chars,Positions>   Move;
   typedef std::list<Move>              Moves;
-  inline static void pos_insert(Positions& s1, const Positions& s2) { s1.insert(s1.end(), s2.begin(), s2.end()); }
-  inline static void pos_add(Positions& s, const Position& e) { s.insert(s.end(), e); }
-  inline static void lazy_insert(Lazypos& s1, const Lazypos& s2) { s1.insert(s1.end(), s2.begin(), s2.end()); }
-  inline static void lazy_add(Lazypos& s, const Lazy i, Location p) { s.insert(s.end(), Position(p).lazy(i)); }
+  static inline void pos_insert(Positions& s1, const Positions& s2) { s1.insert(s1.end(), s2.begin(), s2.end()); }
+  static inline void pos_add(Positions& s, const Position& e) { s.insert(s.end(), e); }
+  static inline void lazy_insert(Lazypos& s1, const Lazypos& s2) { s1.insert(s1.end(), s2.begin(), s2.end()); }
+  static inline void lazy_add(Lazypos& s, const Lazy i, Location p) { s.insert(s.end(), Position(p).lazy(i)); }
 #ifndef WITH_TREE_DFA
   /// Tree DFA constructed from string patterns.
   struct Tree {
@@ -750,8 +750,11 @@ class Pattern {
       }
       bool find_accepting()
       {
-        while (!done())
+        while (!done() && !accepting())
+        {
           ++edge;
+          walk();
+        }
         return accepting();
       }
       bool done()
@@ -1249,6 +1252,21 @@ class Pattern {
   static inline Lookahead lookahead_of(Opcode opcode)
   {
     return opcode & 0xffff;
+  }
+  /// check if lower case
+  static inline bool islowercase(Char c)
+  {
+    return (c >= 'a' && c <= 'z');
+  }
+  /// check if upper case
+  static inline bool isuppercase(Char c)
+  {
+    return (c >= 'A' && c <= 'Z');
+  }
+  /// check if lower or upper case
+  static inline bool isanycase(Char c)
+  {
+    return islowercase(c) || isuppercase(c);
   }
   /// convert to lower case if c is a letter a-z, A-Z.
   static inline Char lowercase(Char c)

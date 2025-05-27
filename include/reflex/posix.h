@@ -46,6 +46,7 @@ namespace reflex {
 
 namespace Posix {
 
+/// Tables of character ranges [lo,hi] for each character class
 class Tables {
  public:
   struct lt {
@@ -56,6 +57,7 @@ class Tables {
   Range range;
 };
 
+/// Return table entry pointer to [lo,hi] range of characters for the given POSIX class name, or return NULL
 const int * range(const char *);
 
 } // namespace Posix

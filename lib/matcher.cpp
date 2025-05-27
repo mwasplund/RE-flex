@@ -30,7 +30,7 @@
 @file      matcher.cpp regex engine
 @brief     RE/flex matcher engine
 @author    Robert van Engelen - engelen@genivia.com
-@copyright (c) 2016-2024, Robert van Engelen, Genivia Inc. All rights reserved.
+@copyright (c) 2016-2025, Robert van Engelen, Genivia Inc. All rights reserved.
 @copyright (c) BSD-3 License - see LICENSE.txt
 */
 
@@ -84,6 +84,7 @@ size_t Matcher::match(Method method)
       }
       else if (pat_->one_)
       {
+        // one string match, no need to perform a regex match
         size_t k = cur_ + pat_->len_;
         int ch = k < end_ ? static_cast<unsigned char>(buf_[k]) : EOF;
         if (!opt_.W || (at_wb() && (at_end() || at_we(ch, k))))
@@ -145,7 +146,7 @@ redo:
         Pattern::Index jump;
         Pattern::Opcode opcode = *pc;
         DBGLOG("Fetch: code[%zu] = 0x%08X", pc - pat_->opc_, opcode);
-        if (!Pattern::is_opcode_goto(opcode))
+        if (REFLEX_UNLIKELY(!Pattern::is_opcode_goto(opcode)))
         {
           switch (opcode >> 24)
           {
@@ -458,7 +459,7 @@ redo:
         }
         else
         {
-          if (Pattern::is_opcode_halt(opcode))
+          if (REFLEX_UNLIKELY(Pattern::is_opcode_halt(opcode)))
           {
             if (back != Pattern::Const::IMAX)
             {
@@ -470,38 +471,38 @@ redo:
             }
             break;
           }
-          if (ch == EOF)
+          if (REFLEX_UNLIKELY(ch == EOF))
             break;
           ch = get();
           DBGLOG("Get: ch = %d (0x%x) at pos %zu", ch, ch, pos_ - 1);
-          if (ch == EOF)
+          if (REFLEX_UNLIKELY(ch == EOF))
             break;
         }
         Pattern::Opcode lo = ch << 24;
         Pattern::Opcode hi = lo | 0x00ffffff;
   unrolled:
-        if (hi < opcode || lo > (opcode << 8))
+        if (REFLEX_LIKELY(hi < opcode || lo > (opcode << 8)))
         {
           opcode = *++pc;
-          if (hi < opcode || lo > (opcode << 8))
+          if (REFLEX_LIKELY(hi < opcode || lo > (opcode << 8)))
           {
             opcode = *++pc;
-            if (hi < opcode || lo > (opcode << 8))
+            if (REFLEX_LIKELY(hi < opcode || lo > (opcode << 8)))
             {
               opcode = *++pc;
-              if (hi < opcode || lo > (opcode << 8))
+              if (REFLEX_LIKELY(hi < opcode || lo > (opcode << 8)))
               {
                 opcode = *++pc;
-                if (hi < opcode || lo > (opcode << 8))
+                if (REFLEX_LIKELY(hi < opcode || lo > (opcode << 8)))
                 {
                   opcode = *++pc;
-                  if (hi < opcode || lo > (opcode << 8))
+                  if (REFLEX_LIKELY(hi < opcode || lo > (opcode << 8)))
                   {
                     opcode = *++pc;
-                    if (hi < opcode || lo > (opcode << 8))
+                    if (REFLEX_LIKELY(hi < opcode || lo > (opcode << 8)))
                     {
                       opcode = *++pc;
-                      if (hi < opcode || lo > (opcode << 8))
+                      if (REFLEX_LIKELY(hi < opcode || lo > (opcode << 8)))
                       {
                         opcode = *++pc;
                         goto unrolled;
@@ -514,7 +515,7 @@ redo:
           }
         }
         jump = Pattern::index_of(opcode);
-        if (jump == 0)
+        if (REFLEX_UNLIKELY(jump == 0))
         {
           // loop back to start state w/o full match: advance to avoid backtracking
           if (cap_ == 0 && method == Const::FIND)
@@ -538,7 +539,7 @@ redo:
             }
           }
         }
-        else if (jump >= Pattern::Const::LONG)
+        else if (REFLEX_UNLIKELY(jump >= Pattern::Const::LONG))
         {
           if (jump == Pattern::Const::HALT)
           {
@@ -669,6 +670,7 @@ redo:
               DBGLOG("Find: look back %zu to pos %zu", retry, cur_);
               goto scan;
             }
+            // if not one string match then perform a regex match, else we're done
             if (!pat_->one_)
               goto scan;
             size_t k = cur_ + pat_->len_;
@@ -995,7 +997,7 @@ bool Matcher::advance_pattern_pin1_one(size_t loc)
       loc = e - buf_;
       set_current_and_peek_more(loc);
       loc = cur_;
-      if (loc + 1 > end_)
+      if (loc + 1 > end_ && eof_)
         return false;
     }
   }
@@ -1008,13 +1010,15 @@ bool Matcher::advance_pattern_pin1_pma(size_t loc)
   const size_t min = pat_->min_;
   const uint16_t lcp = pat_->lcp_;
   const uint16_t lcs = pat_->lcs_;
-#if defined(HAVE_AVX512BW) || defined(HAVE_AVX2) || defined(HAVE_SSE2)
-  __m128i vlcp = _mm_set1_epi8(chr[0]);
-  __m128i vlcs = _mm_set1_epi8(chr[1]);
+  const char chr0 = chr[0];
+  const char chr1 = chr[1];
   while (true)
   {
     const char *s = buf_ + loc + lcp;
     const char *e = buf_ + end_ + lcp - min + 1;
+#if defined(HAVE_AVX512BW) || defined(HAVE_AVX2) || defined(HAVE_SSE2)
+    __m128i vlcp = _mm_set1_epi8(chr0);
+    __m128i vlcs = _mm_set1_epi8(chr1);
     while (s <= e - 16)
     {
       __m128i vstrlcp = _mm_loadu_si128(reinterpret_cast<const __m128i*>(s));
@@ -1022,34 +1026,22 @@ bool Matcher::advance_pattern_pin1_pma(size_t loc)
       __m128i veqlcp = _mm_cmpeq_epi8(vlcp, vstrlcp);
       __m128i veqlcs = _mm_cmpeq_epi8(vlcs, vstrlcs);
       uint32_t mask = _mm_movemask_epi8(_mm_and_si128(veqlcp, veqlcs));
-      while (mask != 0)
+      while (REFLEX_UNLIKELY(mask != 0))
       {
         uint32_t offset = ctz(mask);
-        loc = s - lcp + offset - buf_;
-        if (loc + 4 > end_ || pat_->predict_match(&buf_[loc]))
+        size_t k = s - lcp + offset - buf_;
+        if (k + 4 > end_ || pat_->predict_match(&buf_[k]))
         {
-          set_current(loc);
+          set_current(k);
           return true;
         }
         mask &= mask - 1;
       }
       s += 16;
     }
-    loc = s - lcp - buf_;
-    set_current_and_peek_more(loc);
-    loc = cur_;
-    if (loc + min > end_)
-      return false;
-    if (loc + min + 15 > end_)
-      break;
-  }
 #elif defined(HAVE_NEON)
-  uint8x16_t vlcp = vdupq_n_u8(chr[0]);
-  uint8x16_t vlcs = vdupq_n_u8(chr[1]);
-  while (true)
-  {
-    const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_ + lcp - min + 1;
+    uint8x16_t vlcp = vdupq_n_u8(chr0);
+    uint8x16_t vlcs = vdupq_n_u8(chr1);
     while (s <= e - 16)
     {
       uint8x16_t vstrlcp = vld1q_u8(reinterpret_cast<const uint8_t*>(s));
@@ -1058,68 +1050,55 @@ bool Matcher::advance_pattern_pin1_pma(size_t loc)
       uint8x16_t vmasklcs8 = vceqq_u8(vlcs, vstrlcs);
       uint64x2_t vmask64 = vreinterpretq_u64_u8(vandq_u8(vmasklcp8, vmasklcs8));
       uint64_t mask = vgetq_lane_u64(vmask64, 0);
-      if (mask != 0)
+      if (REFLEX_UNLIKELY(mask != 0))
       {
-        loc = s - lcp - buf_;
+        size_t k = s - lcp - buf_;
         if (static_cast<uint32_t>(mask) == 0)
         {
           mask >>= 32;
-          loc += 4;
+          k += 4;
         }
         do
         {
           if ((mask & 0xff))
           {
-            if (loc + 4 > end_ || pat_->predict_match(&buf_[loc]))
+            if (k + 4 > end_ || pat_->predict_match(&buf_[k]))
             {
-              set_current(loc);
+              set_current(k);
               return true;
             }
           }
           mask >>= 8;
-          ++loc;
+          ++k;
         } while (mask != 0);
       }
       mask = vgetq_lane_u64(vmask64, 1);
-      if (mask != 0)
+      if (REFLEX_UNLIKELY(mask != 0))
       {
-        loc = s - lcp + 8 - buf_;
+        size_t k = s - lcp + 8 - buf_;
         if (static_cast<uint32_t>(mask) == 0)
         {
           mask >>= 32;
-          loc += 4;
+          k += 4;
         }
         do
         {
           if ((mask & 0xff))
           {
-            if (loc + 4 > end_ || pat_->predict_match(&buf_[loc]))
+            if (k + 4 > end_ || pat_->predict_match(&buf_[k]))
             {
-              set_current(loc);
+              set_current(k);
               return true;
             }
           }
           mask >>= 8;
-          ++loc;
+          ++k;
         } while (mask != 0);
       }
       s += 16;
     }
-    loc = s - lcp - buf_;
-    set_current_and_peek_more(loc);
-    loc = cur_;
-    if (loc + min > end_)
-      return false;
-    if (loc + min + 15 > end_)
-      break;
-  }
 #endif
-  const char chr0 = chr[0];
-  const char chr1 = chr[1];
-  while (true)
-  {
-    const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_;
+    e = buf_ + end_;
     if (s < e && (s = static_cast<const char*>(std::memchr(s, chr0, e - s))) != NULL)
     {
       s -= lcp;
@@ -1133,10 +1112,11 @@ bool Matcher::advance_pattern_pin1_pma(size_t loc)
     }
     else
     {
-      loc = std::max<size_t>(loc, e - lcp - buf_);
+      if (e > buf_ + loc + lcp)
+        loc = e - buf_ - lcp;
       set_current_and_peek_more(loc);
       loc = cur_;
-      if (loc + min > end_)
+      if (loc + min > end_ && eof_)
         return false;
     }
   }
@@ -1149,13 +1129,15 @@ bool Matcher::advance_pattern_pin1_pmh(size_t loc)
   const char *chr = pat_->chr_;
   const uint16_t lcp = pat_->lcp_;
   const uint16_t lcs = pat_->lcs_;
-#if defined(HAVE_AVX512BW) || defined(HAVE_AVX2) || defined(HAVE_SSE2)
-  __m128i vlcp = _mm_set1_epi8(chr[0]);
-  __m128i vlcs = _mm_set1_epi8(chr[1]);
+  const int chr0 = chr[0];
+  const int chr1 = chr[1];
   while (true)
   {
     const char *s = buf_ + loc + lcp;
     const char *e = buf_ + end_ + lcp - MIN + 1;
+#if defined(HAVE_AVX512BW) || defined(HAVE_AVX2) || defined(HAVE_SSE2)
+    __m128i vlcp = _mm_set1_epi8(chr0);
+    __m128i vlcs = _mm_set1_epi8(chr1);
     while (s <= e - 16)
     {
       __m128i vstrlcp = _mm_loadu_si128(reinterpret_cast<const __m128i*>(s));
@@ -1163,34 +1145,22 @@ bool Matcher::advance_pattern_pin1_pmh(size_t loc)
       __m128i veqlcp = _mm_cmpeq_epi8(vlcp, vstrlcp);
       __m128i veqlcs = _mm_cmpeq_epi8(vlcs, vstrlcs);
       uint32_t mask = _mm_movemask_epi8(_mm_and_si128(veqlcp, veqlcs));
-      while (mask != 0)
+      while (REFLEX_UNLIKELY(mask != 0))
       {
         uint32_t offset = ctz(mask);
-        loc = s - lcp + offset - buf_;
-        if (pat_->predict_match(&buf_[loc], MIN))
+        size_t k = s - lcp + offset - buf_;
+        if (pat_->predict_match(&buf_[k], MIN))
         {
-          set_current(loc);
+          set_current(k);
           return true;
         }
         mask &= mask - 1;
       }
       s += 16;
     }
-    loc = s - lcp - buf_;
-    set_current_and_peek_more(loc);
-    loc = cur_;
-    if (loc + MIN > end_)
-      return false;
-    if (loc + MIN + 15 > end_)
-      break;
-  }
 #elif defined(HAVE_NEON)
-  uint8x16_t vlcp = vdupq_n_u8(chr[0]);
-  uint8x16_t vlcs = vdupq_n_u8(chr[1]);
-  while (true)
-  {
-    const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_ + lcp - MIN + 1;
+    uint8x16_t vlcp = vdupq_n_u8(chr0);
+    uint8x16_t vlcs = vdupq_n_u8(chr1);
     while (s <= e - 16)
     {
       uint8x16_t vstrlcp = vld1q_u8(reinterpret_cast<const uint8_t*>(s));
@@ -1199,68 +1169,55 @@ bool Matcher::advance_pattern_pin1_pmh(size_t loc)
       uint8x16_t vmasklcs8 = vceqq_u8(vlcs, vstrlcs);
       uint64x2_t vmask64 = vreinterpretq_u64_u8(vandq_u8(vmasklcp8, vmasklcs8));
       uint64_t mask = vgetq_lane_u64(vmask64, 0);
-      if (mask != 0)
+      if (REFLEX_UNLIKELY(mask != 0))
       {
-        loc = s - lcp - buf_;
+        size_t k = s - lcp - buf_;
         if (static_cast<uint32_t>(mask) == 0)
         {
           mask >>= 32;
-          loc += 4;
+          k += 4;
         }
         do
         {
           if ((mask & 0xff))
           {
-            if (pat_->predict_match(&buf_[loc], MIN))
+            if (pat_->predict_match(&buf_[k], MIN))
             {
-              set_current(loc);
+              set_current(k);
               return true;
             }
           }
           mask >>= 8;
-          ++loc;
+          ++k;
         } while (mask != 0);
       }
       mask = vgetq_lane_u64(vmask64, 1);
-      if (mask != 0)
+      if (REFLEX_UNLIKELY(mask != 0))
       {
-        loc = s - lcp  + 8 - buf_;
+        size_t k = s - lcp  + 8 - buf_;
         if (static_cast<uint32_t>(mask) == 0)
         {
           mask >>= 32;
-          loc += 4;
+          k += 4;
         }
         do
         {
           if ((mask & 0xff))
           {
-            if (pat_->predict_match(&buf_[loc], MIN))
+            if (pat_->predict_match(&buf_[k], MIN))
             {
-              set_current(loc);
+              set_current(k);
               return true;
             }
           }
           mask >>= 8;
-          ++loc;
+          ++k;
         } while (mask != 0);
       }
       s += 16;
     }
-    loc = s - lcp - buf_;
-    set_current_and_peek_more(loc);
-    loc = cur_;
-    if (loc + MIN > end_)
-      return false;
-    if (loc + MIN + 15 > end_)
-      break;
-  }
 #endif
-  const int chr0 = chr[0];
-  const int chr1 = chr[1];
-  while (true)
-  {
-    const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_;
+    e = buf_ + end_;
     if (s < e && (s = static_cast<const char*>(std::memchr(s, chr0, e - s))) != NULL)
     {
       s -= lcp;
@@ -1274,10 +1231,11 @@ bool Matcher::advance_pattern_pin1_pmh(size_t loc)
     }
     else
     {
-      loc = std::max<size_t>(loc, e - lcp - buf_);
+      if (e > buf_ + loc + lcp)
+        loc = e - buf_ - lcp;
       set_current_and_peek_more(loc);
       loc = cur_;
-      if (loc + MIN > end_)
+      if (loc + MIN > end_ && eof_)
         return false;
     }
   }
@@ -1285,7 +1243,7 @@ bool Matcher::advance_pattern_pin1_pmh(size_t loc)
 
 #if defined(HAVE_AVX512BW) || defined(HAVE_AVX2) || defined(HAVE_SSE2)
 
-/// My homegrown "needle search" methods
+/// My homegrown "needle search" methods for pins with min=0 or 1
 #define ADV_PAT_PIN_ONE(N, INIT, COMP) \
 bool Matcher::advance_pattern_pin##N##_one(size_t loc) \
 { \
@@ -1301,28 +1259,34 @@ bool Matcher::advance_pattern_pin##N##_one(size_t loc) \
       __m128i veq = _mm_cmpeq_epi8(v0, vstr); \
       COMP \
       uint32_t mask = _mm_movemask_epi8(veq); \
-      while (mask != 0) \
+      while (REFLEX_UNLIKELY(mask != 0)) \
       { \
         uint32_t offset = ctz(mask); \
-        loc = s + offset - buf_; \
-        if (loc + 4 > end_ || pat_->predict_match(&buf_[loc])) \
+        size_t k = s + offset - buf_; \
+        if (k + 4 > end_ || pat_->predict_match(&buf_[k])) \
         { \
-          set_current(loc); \
+          set_current(k); \
           return true; \
         } \
         mask &= mask - 1; \
       } \
       s += 16; \
     } \
+    while (s < e - 3) \
+    { \
+      if (pat_->predict_match(s++)) \
+      { \
+        size_t k = s - buf_ - 1; \
+        set_current(k); \
+        return true; \
+      } \
+    } \
     loc = s - buf_; \
     set_current_and_peek_more(loc); \
     loc = cur_; \
-    if (loc + 1 > end_) \
-      return false; \
-    if (loc + 16 > end_) \
-      break; \
+    if (loc + 3 >= end_) \
+      return true; \
   } \
-  return advance_pattern_pma(loc); \
 }
 
 ADV_PAT_PIN_ONE(2, \
@@ -1416,7 +1380,7 @@ ADV_PAT_PIN_ONE(8, \
     veq = _mm_or_si128(veq, _mm_cmpeq_epi8(v7, vstr)); \
   )
 
-/// My homegrown "needle search" methods
+/// My homegrown "needle search" methods for pins with min=2 or 3 (pma) and min>=4 (pmh)
 #define ADV_PAT_PIN(N, INIT, COMP) \
 bool Matcher::advance_pattern_pin##N##_pma(size_t loc) \
 { \
@@ -1437,28 +1401,38 @@ bool Matcher::advance_pattern_pin##N##_pma(size_t loc) \
       __m128i veqlcs = _mm_cmpeq_epi8(vlcs0, vstrlcs); \
       COMP \
       uint32_t mask = _mm_movemask_epi8(_mm_and_si128(veqlcp, veqlcs)); \
-      while (mask != 0) \
+      while (REFLEX_UNLIKELY(mask != 0)) \
       { \
         uint32_t offset = ctz(mask); \
-        loc = s - lcp + offset - buf_; \
-        if (loc + min + 3 > end_ || pat_->predict_match(&buf_[loc])) \
+        size_t k = s - lcp + offset - buf_; \
+        if (k + min + 3 > end_ || pat_->predict_match(&buf_[k])) \
         { \
-          set_current(loc); \
+          set_current(k); \
           return true; \
         } \
         mask &= mask - 1; \
       } \
       s += 16; \
     } \
-    loc = s - lcp - buf_; \
+    s -= lcp; \
+    e = buf_ + end_ - 3; \
+    while (s < e) \
+    { \
+      if (pat_->predict_match(s++)) \
+      { \
+        size_t k = s - buf_ - 1; \
+        set_current(k); \
+        return true; \
+      } \
+    } \
+    loc = s - buf_; \
     set_current_and_peek_more(loc); \
     loc = cur_; \
-    if (loc + min > end_) \
+    if (loc + min > end_ && eof_) \
       return false; \
-    if (loc + min + 15 > end_) \
-      break; \
+    if (loc + 3 >= end_) \
+      return true; \
   } \
-  return advance_pattern_pma(loc); \
 } \
 \
 template <uint8_t MIN> \
@@ -1480,28 +1454,36 @@ bool Matcher::advance_pattern_pin##N##_pmh(size_t loc) \
       __m128i veqlcs = _mm_cmpeq_epi8(vlcs0, vstrlcs); \
       COMP \
       uint32_t mask = _mm_movemask_epi8(_mm_and_si128(veqlcp, veqlcs)); \
-      while (mask != 0) \
+      while (REFLEX_UNLIKELY(mask != 0)) \
       { \
         uint32_t offset = ctz(mask); \
-        loc = s - lcp + offset - buf_; \
-        if (pat_->predict_match(&buf_[loc], MIN)) \
+        size_t k = s - lcp + offset - buf_; \
+        if (pat_->predict_match(&buf_[k], MIN)) \
         { \
-          set_current(loc); \
+          set_current(k); \
           return true; \
         } \
         mask &= mask - 1; \
       } \
       s += 16; \
     } \
-    loc = s - lcp - buf_; \
+    s -= lcp; \
+    e = buf_ + end_ - MIN + 1; \
+    while (s < e) \
+    { \
+      if (pat_->predict_match(s++, MIN)) \
+      { \
+        size_t k = s - buf_ - 1; \
+        set_current(k); \
+        return true; \
+      } \
+    } \
+    loc = s - buf_; \
     set_current_and_peek_more(loc); \
     loc = cur_; \
-    if (loc + MIN > end_) \
+    if (loc + MIN > end_ && eof_) \
       return false; \
-    if (loc + MIN + 15 > end_) \
-      break; \
   } \
-  return advance_pattern_min4<MIN>(loc); \
 }
 
 ADV_PAT_PIN(2, \
@@ -1660,7 +1642,7 @@ ADV_PAT_PIN(8, \
 
 #elif defined(HAVE_NEON)
 
-/// My homegrown "needle search" methods
+/// My homegrown "needle search" methods for pins with min=0 or 1
 #define ADV_PAT_PIN_ONE(N, INIT, COMP) \
 bool Matcher::advance_pattern_pin##N##_one(size_t loc) \
 { \
@@ -1676,62 +1658,68 @@ bool Matcher::advance_pattern_pin##N##_one(size_t loc) \
       COMP \
       uint64x2_t vmask64 = vreinterpretq_u64_u8(vmask8); \
       uint64_t mask = vgetq_lane_u64(vmask64, 0); \
-      if (mask != 0) \
+      if (REFLEX_UNLIKELY(mask != 0)) \
       { \
-        loc = s - buf_; \
+        size_t k = s - buf_; \
         if (static_cast<uint32_t>(mask) == 0) \
         { \
           mask >>= 32; \
-          loc += 4; \
+          k += 4; \
         } \
         do \
         { \
           if ((mask & 0xff) != 0) \
           { \
-            if (loc + 4 > end_ || pat_->predict_match(&buf_[loc])) \
+            if (k + 4 > end_ || pat_->predict_match(&buf_[k])) \
             { \
-              set_current(loc); \
+              set_current(k); \
               return true; \
             } \
           } \
           mask >>= 8; \
-          ++loc; \
+          ++k; \
         } while (mask != 0); \
       } \
       mask = vgetq_lane_u64(vmask64, 1); \
-      if (mask != 0) \
+      if (REFLEX_UNLIKELY(mask != 0)) \
       { \
-        loc = s + 8 - buf_; \
+        size_t k = s + 8 - buf_; \
         if (static_cast<uint32_t>(mask) == 0) \
         { \
           mask >>= 32; \
-          loc += 4; \
+          k += 4; \
         } \
         do \
         { \
           if ((mask & 0xff) != 0) \
           { \
-            if (loc + 4 > end_ || pat_->predict_match(&buf_[loc])) \
+            if (k + 4 > end_ || pat_->predict_match(&buf_[k])) \
             { \
-              set_current(loc); \
+              set_current(k); \
               return true; \
             } \
           } \
           mask >>= 8; \
-          ++loc; \
+          ++k; \
         } while (mask != 0); \
       } \
       s += 16; \
     } \
+    while (s < e - 3) \
+    { \
+      if (pat_->predict_match(s++)) \
+      { \
+        size_t k = s - buf_ - 1; \
+        set_current(k); \
+        return true; \
+      } \
+    } \
     loc = s - buf_; \
     set_current_and_peek_more(loc); \
     loc = cur_; \
-    if (loc + 1 > end_) \
-      return false; \
-    if (loc + 16 > end_) \
-      break; \
+    if (loc + 3 >= end_) \
+      return true; \
   } \
-  return advance_pattern_pma(loc); \
 }
 
 ADV_PAT_PIN_ONE(2, \
@@ -1864,7 +1852,7 @@ ADV_PAT_PIN_ONE(8, \
         vceqq_u8(v7, vstr)); \
   )
 
-/// My homegrown "needle search" methods
+/// My homegrown "needle search" methods for pins with min=2 or 3 (pma) and min>=4 (pmh)
 #define ADV_PAT_PIN(N, INIT, COMP) \
 bool Matcher::advance_pattern_pin##N##_pma(size_t loc) \
 { \
@@ -1884,62 +1872,72 @@ bool Matcher::advance_pattern_pin##N##_pma(size_t loc) \
       COMP \
       uint64x2_t vmask64 = vreinterpretq_u64_u8(vandq_u8(vmasklcp8, vmasklcs8)); \
       uint64_t mask = vgetq_lane_u64(vmask64, 0); \
-      if (mask != 0) \
+      if (REFLEX_UNLIKELY(mask != 0)) \
       { \
-        loc = s - lcp - buf_; \
+        size_t k = s - lcp - buf_; \
         if (static_cast<uint32_t>(mask) == 0) \
         { \
           mask >>= 32; \
-          loc += 4; \
+          k += 4; \
         } \
         do \
         { \
           if ((mask & 0xff) != 0) \
           { \
-            if (loc + 4 > end_ || pat_->predict_match(&buf_[loc])) \
+            if (k + 4 > end_ || pat_->predict_match(&buf_[k])) \
             { \
-              set_current(loc); \
+              set_current(k); \
               return true; \
             } \
           } \
           mask >>= 8; \
-          ++loc; \
+          ++k; \
         } while (mask != 0); \
       } \
       mask = vgetq_lane_u64(vmask64, 1); \
-      if (mask != 0) \
+      if (REFLEX_UNLIKELY(mask != 0)) \
       { \
-        loc = s - lcp + 8 - buf_; \
+        size_t k = s - lcp + 8 - buf_; \
         if (static_cast<uint32_t>(mask) == 0) \
         { \
           mask >>= 32; \
-          loc += 4; \
+          k += 4; \
         } \
         do \
         { \
           if ((mask & 0xff) != 0) \
           { \
-            if (loc + 4 > end_ || pat_->predict_match(&buf_[loc])) \
+            if (k + 4 > end_ || pat_->predict_match(&buf_[k])) \
             { \
-              set_current(loc); \
+              set_current(k); \
               return true; \
             } \
           } \
           mask >>= 8; \
-          ++loc; \
+          ++k; \
         } while (mask != 0); \
       } \
       s += 16; \
     } \
-    loc = s - lcp - buf_; \
+    s -= lcp; \
+    e = buf_ + end_ - 3; \
+    while (s < e) \
+    { \
+      if (pat_->predict_match(s++)) \
+      { \
+        size_t k = s - buf_ - 1; \
+        set_current(k); \
+        return true; \
+      } \
+    } \
+    loc = s - buf_; \
     set_current_and_peek_more(loc); \
     loc = cur_; \
-    if (loc + min > end_) \
+    if (loc + min > end_ && eof_) \
       return false; \
-    if (loc + min + 15 > end_) \
-      break; \
+    if (loc + 3 >= end_) \
+      return true; \
   } \
-  return advance_pattern_pma(loc); \
 } \
 \
 template <uint8_t MIN> \
@@ -1960,62 +1958,70 @@ bool Matcher::advance_pattern_pin##N##_pmh(size_t loc) \
       COMP \
       uint64x2_t vmask64 = vreinterpretq_u64_u8(vandq_u8(vmasklcp8, vmasklcs8)); \
       uint64_t mask = vgetq_lane_u64(vmask64, 0); \
-      if (mask != 0) \
+      if (REFLEX_UNLIKELY(mask != 0)) \
       { \
-        loc = s - lcp - buf_; \
+        size_t k = s - lcp - buf_; \
         if (static_cast<uint32_t>(mask) == 0) \
         { \
           mask >>= 32; \
-          loc += 4; \
+          k += 4; \
         } \
         do \
         { \
           if ((mask & 0xff) != 0) \
           { \
-            if (loc + 4 > end_ || pat_->predict_match(&buf_[loc])) \
+            if (k + 4 > end_ || pat_->predict_match(&buf_[k])) \
             { \
-              set_current(loc); \
+              set_current(k); \
               return true; \
             } \
           } \
           mask >>= 8; \
-          ++loc; \
+          ++k; \
         } while (mask != 0); \
       } \
       mask = vgetq_lane_u64(vmask64, 1); \
-      if (mask != 0) \
+      if (REFLEX_UNLIKELY(mask != 0)) \
       { \
-        loc = s - lcp + 8 - buf_; \
+        size_t k = s - lcp + 8 - buf_; \
         if (static_cast<uint32_t>(mask) == 0) \
         { \
           mask >>= 32; \
-          loc += 4; \
+          k += 4; \
         } \
         do \
         { \
           if ((mask & 0xff) != 0) \
           { \
-            if (loc + 4 > end_ || pat_->predict_match(&buf_[loc])) \
+            if (k + 4 > end_ || pat_->predict_match(&buf_[k])) \
             { \
-              set_current(loc); \
+              set_current(k); \
               return true; \
             } \
           } \
           mask >>= 8; \
-          ++loc; \
+          ++k; \
         } while (mask != 0); \
       } \
       s += 16; \
     } \
-    loc = s - lcp - buf_; \
+    s -= lcp; \
+    e = buf_ + end_ - MIN + 1; \
+    while (s < e) \
+    { \
+      if (pat_->predict_match(s++, MIN)) \
+      { \
+        size_t k = s - buf_ - 1; \
+        set_current(k); \
+        return true; \
+      } \
+    } \
+    loc = s - buf_; \
     set_current_and_peek_more(loc); \
     loc = cur_; \
-    if (loc + MIN > end_) \
+    if (loc + MIN > end_ && eof_) \
       return false; \
-    if (loc + MIN + 15 > end_) \
-      break; \
   } \
-  return advance_pattern_min4<MIN>(loc); \
 }
 
 ADV_PAT_PIN(2, \
@@ -2252,7 +2258,7 @@ ADV_PAT_PIN(8, \
 
 #endif
 
-/// Minimal 1 byte long patterns using 4-way bitap hashed pairs then PM4
+/// Minimal 1 byte long patterns with min=0 or 1 using 4-way bitap hashed pairs then PM4
 bool Matcher::advance_pattern_min1(size_t loc)
 {
   const Pattern::Pred *tap = pat_->tap_;
@@ -2285,8 +2291,8 @@ bool Matcher::advance_pattern_min1(size_t loc)
         loc = s - buf_ + 1;
         continue;
       }
-      loc = s - buf_;
-      set_current(loc);
+      size_t k = s - buf_;
+      set_current(k);
       return true;
     }
     loc = s - buf_;
@@ -2294,13 +2300,24 @@ bool Matcher::advance_pattern_min1(size_t loc)
     loc = cur_;
     if (loc + 4 >= end_)
     {
+      s = buf_ + loc;
+      e = buf_ + end_;
+      while (s < e)
+      {
+        uint8_t c1 = s + 1 < e ? static_cast<uint8_t>(s[1]) : 0;
+        if (!(tap[Pattern::bihash(c0, c1)] & 1))
+          break;
+        c0 = c1;
+        ++s;
+      }
+      loc = s - buf_;
       set_current(loc);
       return loc + 1 <= end_;
     }
   }
 }
 
-/// Minimal 2 byte long patterns using bitap hashed pairs and PM4
+/// Minimal 2 byte long patterns with min=2 using bitap hashed pairs and PM4
 bool Matcher::advance_pattern_min2(size_t loc)
 {
   const Pattern::Pred *tap = pat_->tap_;
@@ -2317,20 +2334,31 @@ bool Matcher::advance_pattern_min2(size_t loc)
       c0 = c1;
       if ((state & 2) == 0 && (s > e - 2 || pat_->predict_match(s - 2)))
       {
-        loc = s - buf_ - 2;
-        set_current(loc);
+        size_t k = s - buf_ - 2;
+        set_current(k);
         return true;
       }
     }
     loc = s - buf_;
-    set_current_and_peek_more(loc);
-    loc = cur_;
-    if (loc + 1 >= end_)
+    size_t m = std::min<size_t>(1, loc); // to clamp loc - 1
+    set_current_and_peek_more(loc - m); // clamp loc - 1
+    loc = cur_ + m;
+    if (loc + 1 >= end_ && eof_)
+    {
+      uint8_t c1 = 0; // reached the end
+      state = (state << 1) | tap[Pattern::bihash(c0, c1)];
+      if ((state & 2) == 0)
+      {
+        set_current(loc - 1);
+        return true;
+      }
+      set_current(loc);
       return false;
+    }
   }
 }
 
-/// Minimal 3 byte long pattern using bitap hashed pairs and PM4
+/// Minimal 3 byte long pattern with min=3 using bitap hashed pairs and PM4
 bool Matcher::advance_pattern_min3(size_t loc)
 {
   const Pattern::Pred *tap = pat_->tap_;
@@ -2347,16 +2375,27 @@ bool Matcher::advance_pattern_min3(size_t loc)
       c0 = c1;
       if ((state & 4) == 0 && (s > e - 1 || pat_->predict_match(s - 3)))
       {
-        loc = s - buf_ - 3;
-        set_current(loc);
+        size_t k = s - buf_ - 3;
+        set_current(k);
         return true;
       }
     }
     loc = s - buf_;
-    set_current_and_peek_more(loc);
-    loc = cur_;
-    if (loc + 1 >= end_)
+    size_t m = std::min<size_t>(2, loc); // to clamp loc - 2
+    set_current_and_peek_more(loc - m); // clamp loc - 2
+    loc = cur_ + m;
+    if (loc + 1 >= end_ && eof_)
+    {
+      uint8_t c1 = 0; // reached the end
+      state = (state << 1) | tap[Pattern::bihash(c0, c1)];
+      if ((state & 4) == 0)
+      {
+        set_current(loc - 2);
+        return true;
+      }
+      set_current(loc);
       return false;
+    }
   }
 }
 
@@ -2381,32 +2420,33 @@ bool Matcher::advance_pattern_min4(size_t loc)
       state1 = (state2 << 1) | tap[Pattern::bihash(c1, c0)];
       if ((state2 & mask) == 0 && pat_->predict_match(s - MIN - 1, MIN))
       {
-        loc = s - buf_ - MIN - 1;
-        set_current(loc);
+        size_t k = s - buf_ - MIN - 1;
+        set_current(k);
         return true;
       }
       if ((state1 & mask) == 0 && pat_->predict_match(s - MIN, MIN))
       {
-        loc = s - buf_ - MIN;
-        set_current(loc);
+        size_t k = s - buf_ - MIN;
+        set_current(k);
         return true;
       }
     }
     size_t ahead = s - buf_;
-    set_current_and_peek_more(ahead);
-    s = buf_ + cur_;
+    size_t m = std::min<size_t>(MIN - 1, ahead); // to clamp ahead - MIN + 1
+    set_current_and_peek_more(ahead - m); // clamp ahead - MIN + 1
+    s = buf_ + cur_ + m;
     e = buf_ + end_ - 2;
-    if (s >= e)
+    if (s >= e && eof_)
     {
-      uint8_t c0 = static_cast<uint8_t>(*s);
+      c0 = static_cast<uint8_t>(*s);
       if (s == e + 1)
       {
         uint8_t c1 = 0; // reached the end
         state2 = (state1 << 1) | tap[Pattern::bihash(c0, c1)];
         if ((state2 & mask) == 0 && pat_->predict_match(s - MIN + 1, MIN))
         {
-          loc = s - buf_ - MIN + 1;
-          set_current(loc);
+          size_t k = s - buf_ - MIN + 1;
+          set_current(k);
           return true;
         }
       }
@@ -2418,50 +2458,47 @@ bool Matcher::advance_pattern_min4(size_t loc)
         state1 = (state2 << 1) | tap[Pattern::bihash(c1, c0)];
         if ((state2 & mask) == 0 && pat_->predict_match(s - MIN, MIN))
         {
-          loc = s - buf_ - MIN;
-          set_current(loc);
+          size_t k = s - buf_ - MIN;
+          set_current(k);
           return true;
         }
         if ((state1 & mask) == 0 && pat_->predict_match(s - MIN + 1, MIN))
         {
-          loc = s - buf_ - MIN + 1;
-          set_current(loc);
+          size_t k = s - buf_ - MIN + 1;
+          set_current(k);
           return true;
         }
       }
+      set_current(ahead);
       return false;
     }
   }
 }
 
-/// Minimal 1 byte long pattern using PM4
+/// Minimal 1 byte long pattern with min=0 or 1 using PM4
 bool Matcher::advance_pattern_pma(size_t loc)
 {
   while (true)
   {
     const char *s = buf_ + loc;
     const char *e = buf_ + end_;
-    while (s < e - 6 &&
-        !pat_->predict_match(s) &&
-        !pat_->predict_match(++s) &&
-        !pat_->predict_match(++s) &&
-        !pat_->predict_match(++s))
+    while (s < e - 6)
     {
-      ++s;
+      if (pat_->predict_match(s++) ||
+          pat_->predict_match(s++) ||
+          pat_->predict_match(s++) ||
+          pat_->predict_match(s++))
+      {
+        size_t k = s - buf_ - 1;
+        set_current(k);
+        return true;
+      }
     }
     loc = s - buf_;
-    if (s < e)
-    {
-      set_current(loc);
-      return true;
-    }
     set_current_and_peek_more(loc);
     loc = cur_;
     if (loc + 6 >= end_)
-    {
-      set_current(loc);
-      return loc + pat_->min_ <= end_;
-    }
+      return advance_pattern_min1(loc);
   }
 }
 
@@ -2476,14 +2513,14 @@ bool Matcher::advance_char(size_t loc)
     s = static_cast<const char*>(std::memchr(s, chr0, e - s));
     if (s != NULL)
     {
-      loc = s - buf_;
-      set_current(loc);
+      size_t k = s - buf_;
+      set_current(k);
       return true;
     }
     loc = e - buf_;
     set_current_and_peek_more(loc);
     loc = cur_;
-    if (loc + 1 > end_)
+    if (loc + 1 > end_ && eof_)
       return false;
   }
 }
@@ -2512,7 +2549,7 @@ bool Matcher::advance_char_pma(size_t loc)
       loc = e - buf_;
       set_current_and_peek_more(loc);
       loc = cur_;
-      if (loc + 1 > end_)
+      if (loc + 1 > end_ && eof_)
         return false;
     }
   }
@@ -2543,24 +2580,24 @@ bool Matcher::advance_char_pmh(size_t loc)
       loc = e - buf_;
       set_current_and_peek_more(loc);
       loc = cur_;
-      if (loc + 1 > end_)
+      if (loc + 1 > end_ && eof_)
         return false;
     }
   }
 }
 
-/// Few chars
+/// Few (2 or 3) chars
 template <uint8_t LEN>
 bool Matcher::advance_chars(size_t loc)
 {
   const uint16_t lcp = 0;
   const uint16_t lcs = LEN - 1;
   const char *chr = pat_->chr_;
-#if defined(HAVE_AVX512BW) || defined(HAVE_AVX2) || defined(HAVE_SSE2)
   while (true)
   {
     const char *s = buf_ + loc + lcp;
     const char *e = buf_ + end_ + lcp - LEN + 1;
+#if defined(HAVE_AVX512BW) || defined(HAVE_AVX2) || defined(HAVE_SSE2)
     __m128i vlcp = _mm_set1_epi8(chr[lcp]);
     __m128i vlcs = _mm_set1_epi8(chr[lcs]);
     while (s <= e - 16)
@@ -2570,33 +2607,21 @@ bool Matcher::advance_chars(size_t loc)
       __m128i vlcpeq = _mm_cmpeq_epi8(vlcp, vlcpm);
       __m128i vlcseq = _mm_cmpeq_epi8(vlcs, vlcsm);
       uint32_t mask = _mm_movemask_epi8(_mm_and_si128(vlcpeq, vlcseq));
-      while (mask != 0)
+      while (REFLEX_UNLIKELY(mask != 0))
       {
         uint32_t offset = ctz(mask);
-        loc = s - lcp + offset - buf_;
+        size_t k = s - lcp + offset - buf_;
         if (LEN == 2 ||
             (LEN == 3 ? s[offset + 1 - lcp] == chr[1] : std::memcmp(s + 1 - lcp + offset, chr + 1, LEN - 1) == 0))
         {
-          set_current(loc);
+          set_current(k);
           return true;
         }
         mask &= mask - 1;
       }
       s += 16;
     }
-    loc = s - lcp - buf_;
-    set_current_and_peek_more(loc);
-    loc = cur_;
-    if (loc + LEN > end_)
-      return false;
-    if (loc + LEN + 15 > end_)
-      break;
-  }
 #elif defined(HAVE_NEON)
-  while (true)
-  {
-    const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_ + lcp - LEN + 1;
     uint8x16_t vlcp = vdupq_n_u8(chr[lcp]);
     uint8x16_t vlcs = vdupq_n_u8(chr[lcs]);
     while (s <= e - 16)
@@ -2608,64 +2633,52 @@ bool Matcher::advance_chars(size_t loc)
       uint8x16_t vmask8 = vandq_u8(vlcpeq, vlcseq);
       uint64x2_t vmask64 = vreinterpretq_u64_u8(vmask8);
       uint64_t mask = vgetq_lane_u64(vmask64, 0);
-      if (mask != 0)
+      if (REFLEX_UNLIKELY(mask != 0))
       {
-        loc = s - lcp - buf_;
+        size_t k = s - lcp - buf_;
         if (static_cast<uint32_t>(mask) == 0)
         {
           mask >>= 32;
-          loc += 4;
+          k += 4;
         }
         do
         {
           if ((mask & 0xff) &&
               (LEN == 2 ||
-               (LEN == 3 ? buf_[loc + 1] == chr[1] : std::memcmp(&buf_[loc + 1], chr + 1, LEN - 1) == 0)))
+               (LEN == 3 ? buf_[k + 1] == chr[1] : std::memcmp(&buf_[k + 1], chr + 1, LEN - 1) == 0)))
           {
-            set_current(loc);
+            set_current(k);
             return true;
           }
           mask >>= 8;
-          ++loc;
+          ++k;
         } while (mask != 0);
       }
       mask = vgetq_lane_u64(vmask64, 1);
-      if (mask != 0)
+      if (REFLEX_UNLIKELY(mask != 0))
       {
-        loc = s - lcp + 8 - buf_;
+        size_t k = s - lcp + 8 - buf_;
         if (static_cast<uint32_t>(mask) == 0)
         {
           mask >>= 32;
-          loc += 4;
+          k += 4;
         }
         do
         {
           if ((mask & 0xff) &&
               (LEN == 2 ||
-               (LEN == 3 ? buf_[loc + 1] == chr[1] : std::memcmp(&buf_[loc + 1], chr + 1, LEN - 1) == 0)))
+               (LEN == 3 ? buf_[k + 1] == chr[1] : std::memcmp(&buf_[k + 1], chr + 1, LEN - 1) == 0)))
           {
-            set_current(loc);
+            set_current(k);
             return true;
           }
           mask >>= 8;
-          ++loc;
+          ++k;
         } while (mask != 0);
       }
       s += 16;
     }
-    loc = s - lcp - buf_;
-    set_current_and_peek_more(loc);
-    loc = cur_;
-    if (loc + LEN > end_)
-      return false;
-    if (loc + LEN + 15 > end_)
-      break;
-  }
 #endif
-  while (true)
-  {
-    const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_ + lcp - LEN + 1;
     while (s < e)
     {
       do
@@ -2679,8 +2692,8 @@ bool Matcher::advance_chars(size_t loc)
       if (LEN == 2 ||
           (LEN == 3 ? s[1 - lcp] == chr[1] : std::memcmp(s + 1 - lcp, chr + 1, LEN - 1) == 0))
       {
-        loc = s - lcp - buf_;
-        set_current(loc);
+        size_t k = s - lcp - buf_;
+        set_current(k);
         return true;
       }
       ++s;
@@ -2688,12 +2701,12 @@ bool Matcher::advance_chars(size_t loc)
     loc = s - lcp - buf_;
     set_current_and_peek_more(loc);
     loc = cur_;
-    if (loc + LEN > end_)
+    if (loc + LEN > end_ && eof_)
       return false;
   }
 }
 
-/// Few chars followed by 1 to 4 characters
+/// Few (2 or 3) chars followed by 1 to 4 characters
 template<uint8_t LEN>
 bool Matcher::advance_chars_pma(size_t loc)
 {
@@ -2701,11 +2714,11 @@ bool Matcher::advance_chars_pma(size_t loc)
   const uint16_t lcs = LEN - 1;
   const char *chr = pat_->chr_;
   const size_t min = pat_->min_;
-#if defined(HAVE_AVX512BW) || defined(HAVE_AVX2) || defined(HAVE_SSE2)
   while (true)
   {
     const char *s = buf_ + loc + lcp;
     const char *e = buf_ + end_ + lcp - LEN - min + 1;
+#if defined(HAVE_AVX512BW) || defined(HAVE_AVX2) || defined(HAVE_SSE2)
     __m128i vlcp = _mm_set1_epi8(chr[lcp]);
     __m128i vlcs = _mm_set1_epi8(chr[lcs]);
     while (s <= e - 16)
@@ -2715,16 +2728,16 @@ bool Matcher::advance_chars_pma(size_t loc)
       __m128i vlcpeq = _mm_cmpeq_epi8(vlcp, vlcpm);
       __m128i vlcseq = _mm_cmpeq_epi8(vlcs, vlcsm);
       uint32_t mask = _mm_movemask_epi8(_mm_and_si128(vlcpeq, vlcseq));
-      while (mask != 0)
+      while (REFLEX_UNLIKELY(mask != 0))
       {
         uint32_t offset = ctz(mask);
         if (LEN == 2 ||
             (LEN == 3 ? s[offset + 1 - lcp] == chr[1] : std::memcmp(s + 1 - lcp + offset, chr + 1, LEN - 1) == 0))
         {
-          loc = s - lcp + offset - buf_;
-          if (loc + LEN + 4 > end_ || pat_->predict_match(&buf_[loc + LEN]))
+          size_t k = s - lcp + offset - buf_;
+          if (k + LEN + 4 > end_ || pat_->predict_match(&buf_[k + LEN]))
           {
-            set_current(loc);
+            set_current(k);
             return true;
           }
         }
@@ -2732,19 +2745,7 @@ bool Matcher::advance_chars_pma(size_t loc)
       }
       s += 16;
     }
-    loc = s - lcp - buf_;
-    set_current_and_peek_more(loc);
-    loc = cur_;
-    if (loc + LEN + min > end_)
-      return false;
-    if (loc + LEN + min + 15 > end_)
-      break;
-  }
 #elif defined(HAVE_NEON)
-  while (true)
-  {
-    const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_ + lcp - LEN - min + 1;
     uint8x16_t vlcp = vdupq_n_u8(chr[lcp]);
     uint8x16_t vlcs = vdupq_n_u8(chr[lcs]);
     while (s <= e - 16)
@@ -2756,70 +2757,58 @@ bool Matcher::advance_chars_pma(size_t loc)
       uint8x16_t vmask8 = vandq_u8(vlcpeq, vlcseq);
       uint64x2_t vmask64 = vreinterpretq_u64_u8(vmask8);
       uint64_t mask = vgetq_lane_u64(vmask64, 0);
-      if (mask != 0)
+      if (REFLEX_UNLIKELY(mask != 0))
       {
-        loc = s - lcp - buf_;
+        size_t k = s - lcp - buf_;
         if (static_cast<uint32_t>(mask) == 0)
         {
           mask >>= 32;
-          loc += 4;
+          k += 4;
         }
         do
         {
           if ((mask & 0xff) &&
               (LEN == 2 ||
-               (LEN == 3 ? buf_[loc + 1] == chr[1] : std::memcmp(&buf_[loc + 1], chr + 1, LEN - 1) == 0)))
+               (LEN == 3 ? buf_[k + 1] == chr[1] : std::memcmp(&buf_[k + 1], chr + 1, LEN - 1) == 0)))
           {
-            if (loc + LEN + 4 > end_ || pat_->predict_match(&buf_[loc + LEN]))
+            if (k + LEN + 4 > end_ || pat_->predict_match(&buf_[k + LEN]))
             {
-              set_current(loc);
+              set_current(k);
               return true;
             }
           }
           mask >>= 8;
-          ++loc;
+          ++k;
         } while (mask != 0);
       }
       mask = vgetq_lane_u64(vmask64, 1);
-      if (mask != 0)
+      if (REFLEX_UNLIKELY(mask != 0))
       {
-        loc = s - lcp + 8 - buf_;
+        size_t k = s - lcp + 8 - buf_;
         if (static_cast<uint32_t>(mask) == 0)
         {
           mask >>= 32;
-          loc += 4;
+          k += 4;
         }
         do
         {
           if ((mask & 0xff) &&
               (LEN == 2 ||
-               (LEN == 3 ? buf_[loc + 1] == chr[1] : std::memcmp(&buf_[loc + 1], chr + 1, LEN - 1) == 0)))
+               (LEN == 3 ? buf_[k + 1] == chr[1] : std::memcmp(&buf_[k + 1], chr + 1, LEN - 1) == 0)))
           {
-            if (loc + LEN + 4 > end_ || pat_->predict_match(&buf_[loc + LEN]))
+            if (k + LEN + 4 > end_ || pat_->predict_match(&buf_[k + LEN]))
             {
-              set_current(loc);
+              set_current(k);
               return true;
             }
           }
           mask >>= 8;
-          ++loc;
+          ++k;
         } while (mask != 0);
       }
       s += 16;
     }
-    loc = s - lcp - buf_;
-    set_current_and_peek_more(loc);
-    loc = cur_;
-    if (loc + LEN + min > end_)
-      return false;
-    if (loc + LEN + min + 15 > end_)
-      break;
-  }
 #endif
-  while (true)
-  {
-    const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_ + lcp - LEN - min + 1;
     while (s < e)
     {
       do
@@ -2833,10 +2822,10 @@ bool Matcher::advance_chars_pma(size_t loc)
       if (LEN == 2 ||
           (LEN == 3 ? s[1 - lcp] == chr[1] : std::memcmp(s + 1 - lcp, chr + 1, LEN - 1) == 0))
       {
-        loc = s - lcp - buf_;
-        if (loc + LEN + 4 > end_ || pat_->predict_match(&buf_[loc + LEN]))
+        size_t k = s - lcp - buf_;
+        if (k + LEN + 4 > end_ || pat_->predict_match(&buf_[k + LEN]))
         {
-          set_current(loc);
+          set_current(k);
           return true;
         }
       }
@@ -2845,12 +2834,12 @@ bool Matcher::advance_chars_pma(size_t loc)
     loc = s - lcp - buf_;
     set_current_and_peek_more(loc);
     loc = cur_;
-    if (loc + LEN + min > end_)
+    if (loc + LEN + min > end_ && eof_)
       return false;
   }
 }
 
-/// Few chars followed by 4 to 8 characters
+/// Few (2 or 3) chars followed by 4 to 8 characters
 template<uint8_t LEN>
 bool Matcher::advance_chars_pmh(size_t loc)
 {
@@ -2858,11 +2847,11 @@ bool Matcher::advance_chars_pmh(size_t loc)
   const uint16_t lcs = LEN - 1;
   const char *chr = pat_->chr_;
   const size_t min = pat_->min_;
-#if defined(HAVE_AVX512BW) || defined(HAVE_AVX2) || defined(HAVE_SSE2)
   while (true)
   {
     const char *s = buf_ + loc + lcp;
     const char *e = buf_ + end_ + lcp - LEN - min + 1;
+#if defined(HAVE_AVX512BW) || defined(HAVE_AVX2) || defined(HAVE_SSE2)
     __m128i vlcp = _mm_set1_epi8(chr[lcp]);
     __m128i vlcs = _mm_set1_epi8(chr[lcs]);
     while (s <= e - 16)
@@ -2872,16 +2861,16 @@ bool Matcher::advance_chars_pmh(size_t loc)
       __m128i vlcpeq = _mm_cmpeq_epi8(vlcp, vlcpm);
       __m128i vlcseq = _mm_cmpeq_epi8(vlcs, vlcsm);
       uint32_t mask = _mm_movemask_epi8(_mm_and_si128(vlcpeq, vlcseq));
-      while (mask != 0)
+      while (REFLEX_UNLIKELY(mask != 0))
       {
         uint32_t offset = ctz(mask);
         if (LEN == 2 ||
             (LEN == 3 ? s[offset + 1 - lcp] == chr[1] : std::memcmp(s + 1 - lcp + offset, chr + 1, LEN - 1) == 0))
         {
-          loc = s - lcp + offset - buf_;
-          if (pat_->predict_match(&buf_[loc + LEN], min))
+          size_t k = s - lcp + offset - buf_;
+          if (pat_->predict_match(&buf_[k + LEN], min))
           {
-            set_current(loc);
+            set_current(k);
             return true;
           }
         }
@@ -2889,19 +2878,7 @@ bool Matcher::advance_chars_pmh(size_t loc)
       }
       s += 16;
     }
-    loc = s - lcp - buf_;
-    set_current_and_peek_more(loc);
-    loc = cur_;
-    if (loc + LEN + min > end_)
-      return false;
-    if (loc + LEN + min + 15 > end_)
-      break;
-  }
 #elif defined(HAVE_NEON)
-  while (true)
-  {
-    const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_ + lcp - LEN - min + 1;
     uint8x16_t vlcp = vdupq_n_u8(chr[lcp]);
     uint8x16_t vlcs = vdupq_n_u8(chr[lcs]);
     while (s <= e - 16)
@@ -2913,70 +2890,58 @@ bool Matcher::advance_chars_pmh(size_t loc)
       uint8x16_t vmask8 = vandq_u8(vlcpeq, vlcseq);
       uint64x2_t vmask64 = vreinterpretq_u64_u8(vmask8);
       uint64_t mask = vgetq_lane_u64(vmask64, 0);
-      if (mask != 0)
+      if (REFLEX_UNLIKELY(mask != 0))
       {
-        loc = s - lcp - buf_;
+        size_t k = s - lcp - buf_;
         if (static_cast<uint32_t>(mask) == 0)
         {
           mask >>= 32;
-          loc += 4;
+          k += 4;
         }
         do
         {
           if ((mask & 0xff) &&
               (LEN == 2 ||
-               (LEN == 3 ? buf_[loc + 1] == chr[1] : std::memcmp(&buf_[loc + 1], chr + 1, LEN - 1) == 0)))
+               (LEN == 3 ? buf_[k + 1] == chr[1] : std::memcmp(&buf_[k + 1], chr + 1, LEN - 1) == 0)))
           {
-            if (pat_->predict_match(&buf_[loc + LEN], min))
+            if (pat_->predict_match(&buf_[k + LEN], min))
             {
-              set_current(loc);
+              set_current(k);
               return true;
             }
           }
           mask >>= 8;
-          ++loc;
+          ++k;
         } while (mask != 0);
       }
       mask = vgetq_lane_u64(vmask64, 1);
-      if (mask != 0)
+      if (REFLEX_UNLIKELY(mask != 0))
       {
-        loc = s - lcp + 8 - buf_;
+        size_t k = s - lcp + 8 - buf_;
         if (static_cast<uint32_t>(mask) == 0)
         {
           mask >>= 32;
-          loc += 4;
+          k += 4;
         }
         do
         {
           if ((mask & 0xff) &&
               (LEN == 2 ||
-               (LEN == 3 ? buf_[loc + 1] == chr[1] : std::memcmp(&buf_[loc + 1], chr + 1, LEN - 1) == 0)))
+               (LEN == 3 ? buf_[k + 1] == chr[1] : std::memcmp(&buf_[k + 1], chr + 1, LEN - 1) == 0)))
           {
-            if (pat_->predict_match(&buf_[loc + LEN], min))
+            if (pat_->predict_match(&buf_[k + LEN], min))
             {
-              set_current(loc);
+              set_current(k);
               return true;
             }
           }
           mask >>= 8;
-          ++loc;
+          ++k;
         } while (mask != 0);
       }
       s += 16;
     }
-    loc = s - lcp - buf_;
-    set_current_and_peek_more(loc);
-    loc = cur_;
-    if (loc + LEN + min > end_)
-      return false;
-    if (loc + LEN + min + 15 > end_)
-      break;
-  }
 #endif
-  while (true)
-  {
-    const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_ + lcp - LEN - min + 1;
     while (s < e)
     {
       do
@@ -2990,10 +2955,10 @@ bool Matcher::advance_chars_pmh(size_t loc)
       if (LEN == 2 ||
           (LEN == 3 ? s[1 - lcp] == chr[1] : std::memcmp(s + 1 - lcp, chr + 1, LEN - 1) == 0))
       {
-        loc = s - lcp - buf_;
-        if (pat_->predict_match(&buf_[loc + LEN], min))
+        size_t k = s - lcp - buf_;
+        if (pat_->predict_match(&buf_[k + LEN], min))
         {
-          set_current(loc);
+          set_current(k);
           return true;
         }
       }
@@ -3002,7 +2967,7 @@ bool Matcher::advance_chars_pmh(size_t loc)
     loc = s - lcp - buf_;
     set_current_and_peek_more(loc);
     loc = cur_;
-    if (loc + LEN + min > end_)
+    if (loc + LEN + min > end_ && eof_)
       return false;
   }
 }
@@ -3014,12 +2979,12 @@ bool Matcher::advance_string(size_t loc)
   const size_t len = pat_->len_;
   uint16_t lcp = pat_->lcp_;
   uint16_t lcs = pat_->lcs_;
-#if defined(HAVE_AVX512BW) || defined(HAVE_AVX2) || defined(HAVE_SSE2)
-  // implements SSE2 string search scheme based on http://0x80.pl/articles/simd-friendly-karp-rabin.html
   while (true)
   {
     const char *s = buf_ + loc + lcp;
     const char *e = buf_ + end_ + lcp - len + 1;
+#if defined(HAVE_AVX512BW) || defined(HAVE_AVX2) || defined(HAVE_SSE2)
+    // implements SSE2 string search scheme based on http://0x80.pl/articles/simd-friendly-karp-rabin.html
     __m128i vlcp = _mm_set1_epi8(chr[lcp]);
     __m128i vlcs = _mm_set1_epi8(chr[lcs]);
     while (s <= e - 16)
@@ -3029,47 +2994,24 @@ bool Matcher::advance_string(size_t loc)
       __m128i vlcpeq = _mm_cmpeq_epi8(vlcp, vlcpm);
       __m128i vlcseq = _mm_cmpeq_epi8(vlcs, vlcsm);
       uint32_t mask = _mm_movemask_epi8(_mm_and_si128(vlcpeq, vlcseq));
-      while (mask != 0)
+      while (REFLEX_UNLIKELY(mask != 0))
       {
         uint32_t offset = ctz(mask);
         if (std::memcmp(s - lcp + offset, chr, len) == 0)
         {
-          loc = s - lcp + offset - buf_;
-          set_current(loc);
+          size_t k = s - lcp + offset - buf_;
+          set_current(k);
           return true;
         }
         mask &= mask - 1;
       }
       s += 16;
     }
-    loc = s - lcp - buf_;
-    set_current_and_peek_more(loc);
-    loc = cur_;
-    if (loc + len > end_)
-      return false;
-    if (loc + len + 15 > end_)
-      break;
-  }
 #elif defined(HAVE_NEON)
-  while (true)
-  {
-    const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_ + lcp - len + 1;
+    // slightly faster when abstracted into a routine
     if (simd_advance_string_neon(s, e))
       return true;
-    loc = s - lcp - buf_;
-    set_current_and_peek_more(loc);
-    loc = cur_;
-    if (loc + len > end_)
-      return false;
-    if (loc + len + 15 > end_)
-      break;
-  }
 #endif
-  while (true)
-  {
-    const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_ + lcp - len + 1;
     while (s < e)
     {
       do
@@ -3082,8 +3024,8 @@ bool Matcher::advance_string(size_t loc)
       }
       if (std::memcmp(s - lcp, chr, len) == 0)
       {
-        loc = s - lcp - buf_;
-        set_current(loc);
+        size_t k = s - lcp - buf_;
+        set_current(k);
         return true;
       }
       ++s;
@@ -3091,7 +3033,7 @@ bool Matcher::advance_string(size_t loc)
     loc = s - lcp - buf_;
     set_current_and_peek_more(loc);
     loc = cur_;
-    if (loc + len > end_)
+    if (loc + len > end_ && eof_)
       return false;
   }
 }
@@ -3104,12 +3046,12 @@ bool Matcher::advance_string_pma(size_t loc)
   const size_t min = pat_->min_;
   const uint16_t lcp = pat_->lcp_;
   const uint16_t lcs = pat_->lcs_;
-#if defined(HAVE_AVX512BW) || defined(HAVE_AVX2) || defined(HAVE_SSE2)
-  // implements SSE2 string search scheme based on http://0x80.pl/articles/simd-friendly-karp-rabin.html
   while (true)
   {
     const char *s = buf_ + loc + lcp;
     const char *e = buf_ + end_ + lcp - len - min + 1;
+#if defined(HAVE_AVX512BW) || defined(HAVE_AVX2) || defined(HAVE_SSE2)
+    // implements SSE2 string search scheme based on http://0x80.pl/articles/simd-friendly-karp-rabin.html
     __m128i vlcp = _mm_set1_epi8(chr[lcp]);
     __m128i vlcs = _mm_set1_epi8(chr[lcs]);
     while (s <= e - 16)
@@ -3119,15 +3061,15 @@ bool Matcher::advance_string_pma(size_t loc)
       __m128i vlcpeq = _mm_cmpeq_epi8(vlcp, vlcpm);
       __m128i vlcseq = _mm_cmpeq_epi8(vlcs, vlcsm);
       uint32_t mask = _mm_movemask_epi8(_mm_and_si128(vlcpeq, vlcseq));
-      while (mask != 0)
+      while (REFLEX_UNLIKELY(mask != 0))
       {
         uint32_t offset = ctz(mask);
         if (std::memcmp(s - lcp + offset, chr, len) == 0)
         {
-          loc = s - lcp + offset - buf_;
-          if (loc + len + 4 > end_ || pat_->predict_match(&buf_[loc + len]))
+          size_t k = s - lcp + offset - buf_;
+          if (k + len + 4 > end_ || pat_->predict_match(&buf_[k + len]))
           {
-            set_current(loc);
+            set_current(k);
             return true;
           }
         }
@@ -3135,34 +3077,11 @@ bool Matcher::advance_string_pma(size_t loc)
       }
       s += 16;
     }
-    loc = s - lcp - buf_;
-    set_current_and_peek_more(loc);
-    loc = cur_;
-    if (loc + len + min > end_)
-      return false;
-    if (loc + len + min + 15 > end_)
-      break;
-  }
 #elif defined(HAVE_NEON)
-  while (true)
-  {
-    const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_ + lcp - len - min + 1;
+    // slightly faster when abstracted into a routine
     if (simd_advance_string_pma_neon(s, e))
       return true;
-    loc = s - lcp - buf_;
-    set_current_and_peek_more(loc);
-    loc = cur_;
-    if (loc + len + min > end_)
-      return false;
-    if (loc + len + min + 15 > end_)
-      break;
-  }
 #endif
-  while (true)
-  {
-    const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_ + lcp - len - min + 1;
     while (s < e)
     {
       do
@@ -3175,10 +3094,10 @@ bool Matcher::advance_string_pma(size_t loc)
       }
       if (std::memcmp(s - lcp, chr, len) == 0)
       {
-        loc = s - lcp - buf_;
-        if (loc + len + 4 > end_ || pat_->predict_match(&buf_[loc + len]))
+        size_t k = s - lcp - buf_;
+        if (k + len + 4 > end_ || pat_->predict_match(&buf_[k + len]))
         {
-          set_current(loc);
+          set_current(k);
           return true;
         }
       }
@@ -3187,7 +3106,7 @@ bool Matcher::advance_string_pma(size_t loc)
     loc = s - lcp - buf_;
     set_current_and_peek_more(loc);
     loc = cur_;
-    if (loc + len + min > end_)
+    if (loc + len + min > end_ && eof_)
       return false;
   }
 }
@@ -3200,12 +3119,12 @@ bool Matcher::advance_string_pmh(size_t loc)
   const size_t min = pat_->min_;
   const uint16_t lcp = pat_->lcp_;
   const uint16_t lcs = pat_->lcs_;
-#if defined(HAVE_AVX512BW) || defined(HAVE_AVX2) || defined(HAVE_SSE2)
-  // implements SSE2 string search scheme based on http://0x80.pl/articles/simd-friendly-karp-rabin.html
   while (true)
   {
     const char *s = buf_ + loc + lcp;
     const char *e = buf_ + end_ + lcp - len - min + 1;
+#if defined(HAVE_AVX512BW) || defined(HAVE_AVX2) || defined(HAVE_SSE2)
+    // implements SSE2 string search scheme based on http://0x80.pl/articles/simd-friendly-karp-rabin.html
     __m128i vlcp = _mm_set1_epi8(chr[lcp]);
     __m128i vlcs = _mm_set1_epi8(chr[lcs]);
     while (s <= e - 16)
@@ -3215,15 +3134,15 @@ bool Matcher::advance_string_pmh(size_t loc)
       __m128i vlcpeq = _mm_cmpeq_epi8(vlcp, vlcpm);
       __m128i vlcseq = _mm_cmpeq_epi8(vlcs, vlcsm);
       uint32_t mask = _mm_movemask_epi8(_mm_and_si128(vlcpeq, vlcseq));
-      while (mask != 0)
+      while (REFLEX_UNLIKELY(mask != 0))
       {
         uint32_t offset = ctz(mask);
         if (std::memcmp(s - lcp + offset, chr, len) == 0)
         {
-          loc = s - lcp + offset - buf_;
-          if (pat_->predict_match(&buf_[loc + len], min))
+          size_t k = s - lcp + offset - buf_;
+          if (pat_->predict_match(&buf_[k + len], min))
           {
-            set_current(loc);
+            set_current(k);
             return true;
           }
         }
@@ -3231,34 +3150,11 @@ bool Matcher::advance_string_pmh(size_t loc)
       }
       s += 16;
     }
-    loc = s - lcp - buf_;
-    set_current_and_peek_more(loc);
-    loc = cur_;
-    if (loc + len + min > end_)
-      return false;
-    if (loc + len + min + 15 > end_)
-      break;
-  }
 #elif defined(HAVE_NEON)
-  while (true)
-  {
-    const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_ + lcp - len - min + 1;
+    // slightly faster when abstracted into a routine
     if (simd_advance_string_pmh_neon(s, e))
       return true;
-    loc = s - lcp - buf_;
-    set_current_and_peek_more(loc);
-    loc = cur_;
-    if (loc + len + min > end_)
-      return false;
-    if (loc + len + min + 15 > end_)
-      break;
-  }
 #endif
-  while (true)
-  {
-    const char *s = buf_ + loc + lcp;
-    const char *e = buf_ + end_ + lcp - len - min + 1;
     while (s < e)
     {
       do
@@ -3271,10 +3167,10 @@ bool Matcher::advance_string_pmh(size_t loc)
       }
       if (std::memcmp(s - lcp, chr, len) == 0)
       {
-        loc = s - lcp - buf_;
-        if (pat_->predict_match(&buf_[loc + len], min))
+        size_t k = s - lcp - buf_;
+        if (pat_->predict_match(&buf_[k + len], min))
         {
-          set_current(loc);
+          set_current(k);
           return true;
         }
       }
@@ -3283,7 +3179,7 @@ bool Matcher::advance_string_pmh(size_t loc)
     loc = s - lcp - buf_;
     set_current_and_peek_more(loc);
     loc = cur_;
-    if (loc + len + min > end_)
+    if (loc + len + min > end_ && eof_)
       return false;
   }
 }
@@ -3291,7 +3187,7 @@ bool Matcher::advance_string_pmh(size_t loc)
 #if defined(HAVE_NEON)
 
 // Implements NEON/AArch64 string search scheme based on http://0x80.pl/articles/simd-friendly-karp-rabin.html 64 bit optimized
-bool Matcher::simd_advance_string_neon(const char *&s, const char *e)
+bool Matcher::simd_advance_string_neon(const char *& s, const char *e)
 {
   const uint16_t lcp = pat_->lcp_;
   const uint16_t lcs = pat_->lcs_;
@@ -3308,43 +3204,43 @@ bool Matcher::simd_advance_string_neon(const char *&s, const char *e)
     uint8x16_t vmask8 = vandq_u8(vlcpeq, vlcseq);
     uint64x2_t vmask64 = vreinterpretq_u64_u8(vmask8);
     uint64_t mask = vgetq_lane_u64(vmask64, 0);
-    if (mask != 0)
+    if (REFLEX_UNLIKELY(mask != 0))
     {
-      size_t loc = s - lcp - buf_;
+      size_t k = s - lcp - buf_;
       if (static_cast<uint32_t>(mask) == 0)
       {
         mask >>= 32;
-        loc += 4;
+        k += 4;
       }
       do
       {
-        if ((mask & 0xff) && std::memcmp(&buf_[loc], chr, len) == 0)
+        if ((mask & 0xff) && std::memcmp(&buf_[k], chr, len) == 0)
         {
-          set_current(loc);
+          set_current(k);
           return true;
         }
         mask >>= 8;
-        ++loc;
+        ++k;
       } while (mask != 0);
     }
     mask = vgetq_lane_u64(vmask64, 1);
-    if (mask != 0)
+    if (REFLEX_UNLIKELY(mask != 0))
     {
-      size_t loc = s - lcp + 8 - buf_;
+      size_t k = s - lcp + 8 - buf_;
       if (static_cast<uint32_t>(mask) == 0)
       {
         mask >>= 32;
-        loc += 4;
+        k += 4;
       }
       do
       {
-        if ((mask & 0xff) && std::memcmp(&buf_[loc], chr, len) == 0)
+        if ((mask & 0xff) && std::memcmp(&buf_[k], chr, len) == 0)
         {
-          set_current(loc);
+          set_current(k);
           return true;
         }
         mask >>= 8;
-        ++loc;
+        ++k;
       } while (mask != 0);
     }
     s += 16;
@@ -3353,7 +3249,7 @@ bool Matcher::simd_advance_string_neon(const char *&s, const char *e)
 }
 
 // Implements NEON/AArch64 string search scheme based on http://0x80.pl/articles/simd-friendly-karp-rabin.html 64 bit optimized
-bool Matcher::simd_advance_string_pma_neon(const char *&s, const char *e)
+bool Matcher::simd_advance_string_pma_neon(const char *& s, const char *e)
 {
   const uint16_t lcp = pat_->lcp_;
   const uint16_t lcs = pat_->lcs_;
@@ -3370,49 +3266,49 @@ bool Matcher::simd_advance_string_pma_neon(const char *&s, const char *e)
     uint8x16_t vmask8 = vandq_u8(vlcpeq, vlcseq);
     uint64x2_t vmask64 = vreinterpretq_u64_u8(vmask8);
     uint64_t mask = vgetq_lane_u64(vmask64, 0);
-    if (mask != 0)
+    if (REFLEX_UNLIKELY(mask != 0))
     {
-      size_t loc = s - lcp - buf_;
+      size_t k = s - lcp - buf_;
       if (static_cast<uint32_t>(mask) == 0)
       {
         mask >>= 32;
-        loc += 4;
+        k += 4;
       }
       do
       {
-        if ((mask & 0xff) && std::memcmp(&buf_[loc], chr, len) == 0)
+        if ((mask & 0xff) && std::memcmp(&buf_[k], chr, len) == 0)
         {
-          if (loc + len + 4 > end_ || pat_->predict_match(&buf_[loc + len]))
+          if (k + len + 4 > end_ || pat_->predict_match(&buf_[k + len]))
           {
-            set_current(loc);
+            set_current(k);
             return true;
           }
         }
         mask >>= 8;
-        ++loc;
+        ++k;
       } while (mask != 0);
     }
     mask = vgetq_lane_u64(vmask64, 1);
-    if (mask != 0)
+    if (REFLEX_UNLIKELY(mask != 0))
     {
-      size_t loc = s - lcp + 8 - buf_;
+      size_t k = s - lcp + 8 - buf_;
       if (static_cast<uint32_t>(mask) == 0)
       {
         mask >>= 32;
-        loc += 4;
+        k += 4;
       }
       do
       {
-        if ((mask & 0xff) && std::memcmp(&buf_[loc], chr, len) == 0)
+        if ((mask & 0xff) && std::memcmp(&buf_[k], chr, len) == 0)
         {
-          if (loc + len + 4 > end_ || pat_->predict_match(&buf_[loc + len]))
+          if (k + len + 4 > end_ || pat_->predict_match(&buf_[k + len]))
           {
-            set_current(loc);
+            set_current(k);
             return true;
           }
         }
         mask >>= 8;
-        ++loc;
+        ++k;
       } while (mask != 0);
     }
     s += 16;
@@ -3421,7 +3317,7 @@ bool Matcher::simd_advance_string_pma_neon(const char *&s, const char *e)
 }
 
 // Implements NEON/AArch64 string search scheme based on http://0x80.pl/articles/simd-friendly-karp-rabin.html 64 bit optimized
-bool Matcher::simd_advance_string_pmh_neon(const char *&s, const char *e)
+bool Matcher::simd_advance_string_pmh_neon(const char *& s, const char *e)
 {
   const uint16_t lcp = pat_->lcp_;
   const uint16_t lcs = pat_->lcs_;
@@ -3439,49 +3335,49 @@ bool Matcher::simd_advance_string_pmh_neon(const char *&s, const char *e)
     uint8x16_t vmask8 = vandq_u8(vlcpeq, vlcseq);
     uint64x2_t vmask64 = vreinterpretq_u64_u8(vmask8);
     uint64_t mask = vgetq_lane_u64(vmask64, 0);
-    if (mask != 0)
+    if (REFLEX_UNLIKELY(mask != 0))
     {
-      size_t loc = s - lcp - buf_;
+      size_t k = s - lcp - buf_;
       if (static_cast<uint32_t>(mask) == 0)
       {
         mask >>= 32;
-        loc += 4;
+        k += 4;
       }
       do
       {
-        if ((mask & 0xff) && std::memcmp(&buf_[loc], chr, len) == 0)
+        if ((mask & 0xff) && std::memcmp(&buf_[k], chr, len) == 0)
         {
-          if (pat_->predict_match(&buf_[loc + len], min))
+          if (pat_->predict_match(&buf_[k + len], min))
           {
-            set_current(loc);
+            set_current(k);
             return true;
           }
         }
         mask >>= 8;
-        ++loc;
+        ++k;
       } while (mask != 0);
     }
     mask = vgetq_lane_u64(vmask64, 1);
-    if (mask != 0)
+    if (REFLEX_UNLIKELY(mask != 0))
     {
-      size_t loc = s - lcp + 8 - buf_;
+      size_t k = s - lcp + 8 - buf_;
       if (static_cast<uint32_t>(mask) == 0)
       {
         mask >>= 32;
-        loc += 4;
+        k += 4;
       }
       do
       {
-        if ((mask & 0xff) && std::memcmp(&buf_[loc], chr, len) == 0)
+        if ((mask & 0xff) && std::memcmp(&buf_[k], chr, len) == 0)
         {
-          if (pat_->predict_match(&buf_[loc + len], min))
+          if (pat_->predict_match(&buf_[k + len], min))
           {
-            set_current(loc);
+            set_current(k);
             return true;
           }
         }
         mask >>= 8;
-        ++loc;
+        ++k;
       } while (mask != 0);
     }
     s += 16;
@@ -3521,8 +3417,8 @@ bool Matcher::advance_string_bm(size_t loc)
       }
       if (p < chr)
       {
-        loc = q - buf_ + 1;
-        set_current(loc);
+        k = q - buf_ + 1;
+        set_current(k);
         return true;
       }
       if (chr + bmd >= p)
@@ -3542,7 +3438,7 @@ bool Matcher::advance_string_bm(size_t loc)
     loc = s - buf_;
     set_current_and_peek_more(loc);
     loc = cur_;
-    if (loc + len > end_)
+    if (loc + len > end_ && eof_)
       return false;
   }
 }
@@ -3577,10 +3473,10 @@ bool Matcher::advance_string_bm_pma(size_t loc)
       }
       if (p < chr)
       {
-        loc = q - buf_ + 1;
-        if (loc + len + 4 > end_ || pat_->predict_match(&buf_[loc + len]))
+        k = q - buf_ + 1;
+        if (k + len + 4 > end_ || pat_->predict_match(&buf_[k + len]))
         {
-          set_current(loc);
+          set_current(k);
           return true;
         }
       }
@@ -3601,7 +3497,7 @@ bool Matcher::advance_string_bm_pma(size_t loc)
     loc = s - buf_;
     set_current_and_peek_more(loc);
     loc = cur_;
-    if (loc + len > end_)
+    if (loc + len > end_ && eof_)
       return false;
   }
 }
@@ -3637,10 +3533,10 @@ bool Matcher::advance_string_bm_pmh(size_t loc)
       }
       if (p < chr)
       {
-        loc = q - buf_ + 1;
-        if (loc + len + min > end_ || pat_->predict_match(&buf_[loc + len], min))
+        k = q - buf_ + 1;
+        if (k + len + min > end_ || pat_->predict_match(&buf_[k + len], min))
         {
-          set_current(loc);
+          set_current(k);
           return true;
         }
       }
@@ -3661,7 +3557,7 @@ bool Matcher::advance_string_bm_pmh(size_t loc)
     loc = s - buf_;
     set_current_and_peek_more(loc);
     loc = cur_;
-    if (loc + len > end_)
+    if (loc + len > end_ && eof_)
       return false;
   }
 }

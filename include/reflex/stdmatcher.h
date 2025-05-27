@@ -97,12 +97,12 @@ class StdMatcher : public PatternMatcher<std::regex> {
     return *this;
   }
   /// Polymorphic cloning.
-  virtual StdMatcher *clone()
+  virtual StdMatcher *clone() REFLEX_OVERRIDE
   {
     return new StdMatcher(*this);
   }
   /// Reset this matcher's state to the initial state and when assigned new input.
-  virtual void reset(const char *opt = NULL)
+  virtual void reset(const char *opt = NULL) REFLEX_OVERRIDE
   {
     DBGLOG("StdMatcher::reset()");
     itr_ = fin_ = std::cregex_iterator();
@@ -122,6 +122,7 @@ class StdMatcher : public PatternMatcher<std::regex> {
   /// Set the pattern to use with this matcher (the given pattern is shared and must be persistent), overrides the ECMA/POSIX/AWK syntax option.
   virtual PatternMatcher& pattern(const Pattern *pattern) ///< std::regex for this matcher
     /// @returns this matcher.
+    REFLEX_OVERRIDE
   {
     itr_ = fin_;
     return PatternMatcher::pattern(pattern);
@@ -129,6 +130,7 @@ class StdMatcher : public PatternMatcher<std::regex> {
   /// Set the pattern to use with this matcher (the given pattern is shared and must be persistent), overrides the ECMA/POSIX/AWK syntax option.
   virtual PatternMatcher& pattern(const Pattern& pattern) ///< std::regex for this matcher
     /// @returns this matcher.
+    REFLEX_OVERRIDE
   {
     itr_ = fin_;
     return PatternMatcher::pattern(pattern);
@@ -136,6 +138,7 @@ class StdMatcher : public PatternMatcher<std::regex> {
   /// Set the pattern from a regex string to use with this matcher.
   virtual PatternMatcher& pattern(const char *pattern) ///< regex string to instantiate internal pattern object
     /// @returns this matcher.
+    REFLEX_OVERRIDE
   {
     itr_ = fin_;
     PatternMatcher::pattern(new std::regex(pattern));
@@ -145,13 +148,14 @@ class StdMatcher : public PatternMatcher<std::regex> {
   /// Set the pattern from a regex string to use with this matcher.
   virtual PatternMatcher& pattern(const std::string& pattern) ///< regex string to instantiate internal pattern object
     /// @returns this matcher.
+    REFLEX_OVERRIDE
   {
     itr_ = fin_;
     PatternMatcher::pattern(new std::regex(pattern));
     own_ = true;
     return *this;
   }
-  virtual std::pair<const char*,size_t> operator[](size_t n) const
+  virtual std::pair<const char*,size_t> operator[](size_t n) const REFLEX_OVERRIDE
   {
     if (n == 0)
       return std::pair<const char*,size_t>(txt_, len_);
@@ -162,6 +166,7 @@ class StdMatcher : public PatternMatcher<std::regex> {
   /// Returns the group capture identifier containing the group capture index >0 and name (or NULL) of a named group capture, or (1,NULL) by default
   virtual std::pair<size_t,const char*> group_id()
     /// @returns a pair of size_t and string
+    REFLEX_OVERRIDE
   {
     grp_ = 1;
     if (itr_ == fin_ || (*itr_).size() <= 1)
@@ -173,6 +178,7 @@ class StdMatcher : public PatternMatcher<std::regex> {
   /// Returns the next group capture identifier containing the group capture index >0 and name (or NULL) of a named group capture, or (0,NULL) when no more groups matched
   virtual std::pair<size_t,const char*> group_next_id()
     /// @returns a pair of size_t and string
+    REFLEX_OVERRIDE
   {
     if (itr_ == fin_)
       return std::pair<size_t,const char*>(0, static_cast<const char*>(NULL)); // cast to appease MSVC 2010
@@ -188,6 +194,7 @@ class StdMatcher : public PatternMatcher<std::regex> {
   /// The match method Const::SCAN, Const::FIND, Const::SPLIT, or Const::MATCH, implemented with std::regex.
   virtual size_t match(Method method) ///< match method Const::SCAN, Const::FIND, Const::SPLIT, or Const::MATCH
     /// @returns nonzero when input matched the pattern using method Const::SCAN, Const::FIND, Const::SPLIT, or Const::MATCH.
+    REFLEX_OVERRIDE
   {
     DBGLOG("BEGIN StdMatcher::match(%d)", method);
     reset_text();
@@ -413,6 +420,7 @@ class StdEcmaMatcher : public StdMatcher {
   /// Set the pattern to use with this matcher (the given pattern is shared and must be persistent), fails when a POSIX std::regex is given.
   virtual PatternMatcher& pattern(const Pattern& pattern) ///< std::regex for this matcher
     /// @returns this matcher.
+    REFLEX_OVERRIDE
   {
     ASSERT(!(pattern.flags() & (std::regex::basic | std::regex::extended | std::regex::awk)));
     return StdMatcher::pattern(pattern);
@@ -420,6 +428,7 @@ class StdEcmaMatcher : public StdMatcher {
   /// Set the pattern to use with this matcher (the given pattern is shared and must be persistent), fails when a POSIX std::regex is given.
   virtual PatternMatcher& pattern(const Pattern *pattern) ///< std::regex for this matcher
     /// @returns this matcher.
+    REFLEX_OVERRIDE
   {
     ASSERT(!(pattern.flags() & (std::regex::basic | std::regex::extended | std::regex::awk)));
     return StdMatcher::pattern(pattern);
@@ -427,6 +436,7 @@ class StdEcmaMatcher : public StdMatcher {
   /// Set the pattern from a regex string to use with this matcher.
   virtual PatternMatcher& pattern(const char *pattern) ///< regex string to instantiate internal pattern object
     /// @returns this matcher.
+    REFLEX_OVERRIDE
   {
     itr_ = fin_;
     PatternMatcher::pattern(new std::regex(pattern, std::regex::ECMAScript));
@@ -436,6 +446,7 @@ class StdEcmaMatcher : public StdMatcher {
   /// Set the pattern from a regex string to use with this matcher.
   virtual PatternMatcher& pattern(const std::string& pattern) ///< regex string to instantiate internal pattern object
     /// @returns this matcher.
+    REFLEX_OVERRIDE
   {
     itr_ = fin_;
     PatternMatcher::pattern(new std::regex(pattern, std::regex::ECMAScript));
@@ -494,6 +505,7 @@ class StdPosixMatcher : public StdMatcher {
   /// Set the pattern to use with this matcher (the given pattern is shared and must be persistent), fails when a non-POSIX ERE std::regex is given.
   virtual PatternMatcher& pattern(const Pattern& pattern) ///< std::regex for this matcher
     /// @returns this matcher.
+    REFLEX_OVERRIDE
   {
     ASSERT(pattern.flags() & std::regex::awk);
     return StdMatcher::pattern(pattern);
@@ -501,6 +513,7 @@ class StdPosixMatcher : public StdMatcher {
   /// Set the pattern to use with this matcher (the given pattern is shared and must be persistent), fails when a non-POSIX ERE std::regex is given.
   virtual PatternMatcher& pattern(const Pattern *pattern) ///< std::regex for this matcher
     /// @returns this matcher.
+    REFLEX_OVERRIDE
   {
     ASSERT(pattern.flags() & std::regex::awk);
     return StdMatcher::pattern(pattern);
@@ -508,6 +521,7 @@ class StdPosixMatcher : public StdMatcher {
   /// Set the pattern from a regex string to use with this matcher.
   virtual PatternMatcher& pattern(const char *pattern) ///< regex string to instantiate internal pattern object
     /// @returns this matcher.
+    REFLEX_OVERRIDE
   {
     itr_ = fin_;
     PatternMatcher::pattern(new std::regex(pattern, std::regex::awk));
@@ -517,6 +531,7 @@ class StdPosixMatcher : public StdMatcher {
   /// Set the pattern from a regex string to use with this matcher.
   virtual PatternMatcher& pattern(const std::string& pattern) ///< regex string to instantiate internal pattern object
     /// @returns this matcher.
+    REFLEX_OVERRIDE
   {
     itr_ = fin_;
     PatternMatcher::pattern(new std::regex(pattern, std::regex::awk));

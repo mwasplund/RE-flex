@@ -258,8 +258,8 @@ There are two ways you can use this project:
 1. as a scanner generator for C++, similar to Flex;
 2. as a flexible regex library API for C++.
 
-For the first option, simply build the **reflex** tool and run it on the
-command line on a lexer specification:
+For the first use case, use the **reflex** tool on the command line on a lexer
+specification:
 
     $ reflex --flex --bison --graphs-file lexspec.l
 
@@ -275,13 +275,15 @@ visualized with the [Graphviz dot][dot-url] tool:
 Several examples are included to get you started.  See the [manual][manual-url]
 for more details.
 
-For the second option, simply use the RE/flex matcher API classes to start
-pattern search, matching, splitting and scanning on strings, wide strings,
-files, and streams.
+For the second use case, use the RE/flex matcher API classes to start pattern
+search, matching, splitting and scanning on strings, wide strings, files, and
+streams.
 
 You can select matchers that are based on different regex engines:
 
 - RE/flex regex: `#include <reflex/matcher.h>` and use `reflex::Matcher`;
+- RE/flex fuzzy regex for approximate matching:
+  `#include <reflex/fuzzymatcher.h>` and use `reflex::FuzzyMatcher`
 - PCRE2: `#include <reflex/pcre2matcher.h>` and use `reflex::PCRE2Matcher` or
   `reflex::PCRE2UTFMatcher`.
 - Boost.Regex: `#include <reflex/boostmatcher.h>` and use
@@ -292,15 +294,22 @@ You can select matchers that are based on different regex engines:
 Each matcher may differ in regex syntax features (see the full documentation),
 but they all share the same methods and iterators, such as:
 
-- `matches()` returns nonzero if the input matches the specified pattern;
-- `find()` search input and returns nonzero if a match was found;
-- `scan()` scan input and returns nonzero if input at current position matches;
-- `split()` returns nonzero for a split of the input at the next match;
-- `find.begin()`...`find.end()` filter iterator;
-- `scan.begin()`...`scan.end()` tokenizer iterator;
-- `split.begin()`...`split.end()` splitter iterator.
+- `matches()` returns nonzero if the whole input from start to end matches the specified pattern;
+- `find()` search input and returns nonzero if a match was found, can be repeated;
+- `scan()` scan input and returns nonzero if input at current position matches, can be repeated;
+- `split()` returns nonzero for a split of the input at the next match, can be repeated;
+- `find.begin()`...`find.end()` a filter iterator, iterates with `find()`;
+- `scan.begin()`...`scan.end()` a tokenizer iterator, iterates with `scan()`;
+- `split.begin()`...`split.end()` a splitter iterator, iterates with `split()`.
 
-For example, using Boost.Regex (alternatively use PCRE2 `reflex::PCRE2Matcher`):
+The input matched and searched may be a string, a wide string, a file, or a
+stream.  Searching is incremental, meaning that the input is not buffered as a
+whole in memory, but rather buffered in parts in a sliding window of a few KB.
+The window size may grow to fit a pattern match.  UTF-16/32 file input with a
+UTF BOM is automatically normalized and matched as UTF-8.
+
+For example, using Boost.Regex (alternatively use PCRE2 `reflex::PCRE2Matcher`
+or `reflex::PCRE2UTFMatcher` to match Unicode UTF-8 input):
 
 ```{.cpp}
 #include <reflex/boostmatcher.h> // reflex::BoostMatcher, reflex::Input, boost::regex
@@ -319,14 +328,61 @@ if (matcher.matches() != 0)
   std::cout << std::string(matcher[1].first, matcher[1].second) << " was a good year!" << std::endl;
 ```
 
-To search a string for words `\w+`:
+A pattern match made by any of the regex engines to match input with
+`matches()`, or search with `find()`, or tokenize with `scan()`, or split with
+`split()` includes detailed information that can be retrieved with the
+following methods:
+
+- `accept()` returns group capture index (or zero if not captured/matched)
+- `text()` returns `const char*` to 0-terminated match (ends in `\0`)
+- `strview()`returns `std::string_view` text match (preserves `\0`s) (C++17)
+- `str()` returns `std::string` text match (preserves `\0`s)
+- `wstr()` returns `std::wstring` wide text match (converted from UTF-8)
+- `chr()` returns first 8-bit char of the text match (`str()[0]` as int)
+- `wchr()` returns first wide char of the text match (`wstr()[0]` as int)
+- `pair()` returns `std::pair<size_t,std::string>(accept(),str())`
+- `wpair()` returns `std::pair<size_t,std::wstring>(accept(),wstr())`
+- `size()` returns the length of the text match in bytes
+- `wsize()` returns the length of the match in number of wide characters
+- `lines()` returns the number of lines in the text match (>=1)
+- `columns()` returns the number of columns of the text match (>=0)
+- `begin()` returns `const char*` to non-0-terminated text match begin
+- `end()` returns `const char*` to non-0-terminated text match end
+- `rest()` returns `const char*` to 0-terminated rest of input
+- `span()` returns `const char*` to 0-terminated match enlarged to span the line
+- `line()` returns `std::string` line with the matched text as a substring
+- `wline()` returns `std::wstring` line with the matched text as a substring
+- `more()` tells the matcher to append the next match (when using `scan()`)
+- `less(n)` cuts `text()` to `n` bytes and repositions the matcher
+- `lineno()` returns line number of the match, starting at line 1
+- `columno()` returns column number of the match in characters, starting at 0
+- `lineno_end()` returns ending line number of the match, starting at line 1
+- `columno_end()` returns ending column number of the match, starting at 0
+- `bol()` returns `const char*` to begin of matching line (not 0-terminated)
+- `border()`returns the byte offset from the start of the line of the match
+- `first()` returns input position of the first character of the match
+- `last()` returns input position + 1 of the last character of the match
+- `at_bol()` true if matcher reached the begin of a new line `\n`
+- `at_bob()` true if matcher is at the begin of input and no input consumed
+- `at_end()` true if matcher is at the end of input
+- `[0]` operator returns `std::pair<const char*,size_t>(begin(),size())`
+- `[n]` operator returns n'th capture `std::pair<const char*,size_t>`
+
+Note: POSIX matchers do not generally support group capturing, e.g.
+`BoostPosixMatcher` and `StdPosixMatcher` do not.  RE/flex is an efficient
+backtrack-free DFA-based POSIX engine that supports a limited form of
+capturing, limited to outermost gouping, such as `(abc)|(def)` which has two
+groups.  This may be extended in a future release to full capturing.
+
+To search a string for words `\w+` to display with the column number of each
+word found:
 
 ```{.cpp}
 #include <reflex/boostmatcher.h> // reflex::BoostMatcher, reflex::Input, boost::regex
 // use a BoostMatcher to search for words in a sentence
 reflex::BoostMatcher matcher("\\w+", "How now brown cow.");
 while (matcher.find() != 0)
-  std::cout << "Found " << matcher.text() << std::endl;
+  std::cout << "Found " << matcher.text() << " at column " << matcher.columno() << std::endl;
 ```
 
 The `split` method is roughly the inverse of the `find` method and returns text
@@ -441,7 +497,7 @@ License and copyright
 ---------------------
 
 RE/flex by Robert van Engelen, Genivia Inc.
-Copyright (c) 2016-2023, All rights reserved.
+Copyright (c) 2016-2025, All rights reserved.
 
 RE/flex is distributed under the BSD-3 license LICENSE.txt.
 Use, modification, and distribution are subject to the BSD-3 license.
@@ -610,6 +666,10 @@ Changelog
 - Jan  9, 2025: 5.1.1 fix a minor issue with case-insensitive matching when regex patterns are specified in certain ways in combination with "string-like" patterns such that one ore more alternating sub-patterns overlap from the start.
 - Jan 24, 2025: 5.2.0 new file encoding type `null_data` to read NUL as LF and vice versa; supports reading `xargs -0` output for example.
 - Jan 27, 2025: 5.2.1 fix a regression issue with non-SIMD-optimized search with `Matcher::find()`.
+- Feb  3, 2025: 5.2.2 `Matcher::find()` speed improvements for certain regex patterns that do not match the input.
+- Feb 28, 2025: 5.3.0 improve case-insensitive matching to support the Unicode upper/lower sets of letters.
+- Apr 29, 2025: 5.4.0 natively support non-blocking `FILE*` input, i.e. for `fcntl` `O_NONBLOCK` the regex matchers will wait for input to become available again instead of giving up with an error; changed `reflex::Input::Handler` see documentation; remove compiler warnings.
+- May 16, 2025: 5.5.0 new `reflex` option `-D` to immediately debug a scanner's lexer patterns against a specified input file; fix an issue with `Matcher::find()` for certain short patterns with ^$ anchors; mark `likely` and `unlikely` branches in hot paths for `Matcher::find()` performance.
 
 [logo-url]: https://www.genivia.com/images/reflex-logo.png
 [reflex-url]: https://www.genivia.com/reflex.html

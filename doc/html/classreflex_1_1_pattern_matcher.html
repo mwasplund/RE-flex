@@ -21,7 +21,7 @@
      <td>
       <div style="float: right; font-size: 18px; font-weight: bold;">reflex::PatternMatcher&lt; P &gt; Class Template Reference</div>
       <br>
-      <div style="float: right; font-size: 10px;">updated Mon Jan 27 2025 by Robert van Engelen</div>
+      <div style="float: right; font-size: 10px;">updated Fri May 16 2025 by Robert van Engelen</div>
      </td>
      <td width="10%">&nbsp;</td>
     </tr>
@@ -78,16 +78,16 @@ Collaboration diagram for reflex::PatternMatcher&lt; P &gt;:</div>
 <div class="dyncontent">
 <div class="center"><img src="classreflex_1_1_pattern_matcher__coll__graph.png" border="0" usemap="#reflex_1_1_pattern_matcher_3_01_p_01_4_coll__map" alt="Collaboration graph"/></div>
 <map name="reflex_1_1_pattern_matcher_3_01_p_01_4_coll__map" id="reflex_1_1_pattern_matcher_3_01_p_01_4_coll__map">
-<area shape="rect" id="node2" href="classreflex_1_1_abstract_matcher.html" title="The abstract matcher base class template defines an interface for all pattern matcher engines..." alt="" coords="1027,78,1185,105"/>
-<area shape="rect" id="node5" href="classreflex_1_1_abstract_matcher_1_1_operation.html" title="AbstractMatcher::Operation functor to match input to a pattern, also provides a (const) AbstractMatch..." alt="" coords="1307,120,1465,161"/>
-<area shape="rect" id="node3" href="structreflex_1_1_abstract_matcher_1_1_handler.html" title="Event handler functor base class to invoke when the buffer contents are shifted out, e.g. for logging the data searched. " alt="" coords="787,5,945,47"/>
-<area shape="rect" id="node4" href="structreflex_1_1_abstract_matcher_1_1_option.html" title="AbstractMatcher::Options for matcher engines. " alt="" coords="787,71,945,112"/>
-<area shape="rect" id="node6" href="classreflex_1_1_input.html" title="Input character sequence class for unified access to sources of input text. " alt="" coords="820,137,912,163"/>
-<area shape="rect" id="node7" href="structreflex_1_1_input_1_1_handler.html" title="FILE* handler functor base class to handle FILE* errors and non&#45;blocking FILE* reads. " alt="" coords="537,111,683,138"/>
-<area shape="rect" id="node8" title="STL class. " alt="" coords="565,162,655,189"/>
-<area shape="rect" id="node9" title="STL class. " alt="" coords="359,155,488,196"/>
-<area shape="rect" id="node10" title="STL class. " alt="" coords="155,162,309,189"/>
-<area shape="rect" id="node11" title="STL class. " alt="" coords="5,162,105,189"/>
+<area shape="rect" id="node2" href="classreflex_1_1_abstract_matcher.html" title="The abstract matcher base class template defines an interface for all pattern matcher engines..." alt="" coords="1018,80,1175,107"/>
+<area shape="rect" id="node5" href="classreflex_1_1_abstract_matcher_1_1_operation.html" title="AbstractMatcher::Operation functor to match input to a pattern, also provides a (const) AbstractMatch..." alt="" coords="1294,121,1452,163"/>
+<area shape="rect" id="node3" href="structreflex_1_1_abstract_matcher_1_1_handler.html" title="Event handler functor base class to invoke when the buffer contents are shifted out, e.g. for logging the data searched. " alt="" coords="781,5,938,47"/>
+<area shape="rect" id="node4" href="structreflex_1_1_abstract_matcher_1_1_option.html" title="AbstractMatcher::Options for matcher engines. " alt="" coords="781,72,938,114"/>
+<area shape="rect" id="node6" href="classreflex_1_1_input.html" title="Input character sequence class for unified access to sources of input text. " alt="" coords="814,138,905,165"/>
+<area shape="rect" id="node7" href="structreflex_1_1_input_1_1_handler.html" title="FILE* handler functor base class to analyze FILE* input, handle errors and non&#45;blocking FILE* reads..." alt="" coords="535,113,679,140"/>
+<area shape="rect" id="node8" title="STL class. " alt="" coords="562,164,652,191"/>
+<area shape="rect" id="node9" title="STL class. " alt="" coords="358,156,486,198"/>
+<area shape="rect" id="node10" title="STL class. " alt="" coords="154,164,308,191"/>
+<area shape="rect" id="node11" title="STL class. " alt="" coords="5,164,105,191"/>
 </map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
@@ -159,6 +159,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:aaf7e85c26dc2e1252f8fb0511cf16067 inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classreflex_1_1_abstract_matcher.html#aaf7e85c26dc2e1252f8fb0511cf16067">set_handler</a> (<a class="el" href="structreflex_1_1_abstract_matcher_1_1_handler.html">Handler</a> *handler)</td></tr>
 <tr class="memdesc:aaf7e85c26dc2e1252f8fb0511cf16067 inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set event handler functor to invoke when the buffer contents are shifted out, e.g. for logging the data searched.  <a href="#aaf7e85c26dc2e1252f8fb0511cf16067">More...</a><br /></td></tr>
 <tr class="separator:aaf7e85c26dc2e1252f8fb0511cf16067 inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad1d4b904805578a7f4acd800a52b9c6b inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classreflex_1_1_abstract_matcher.html#ad1d4b904805578a7f4acd800a52b9c6b">handle</a> ()</td></tr>
+<tr class="memdesc:ad1d4b904805578a7f4acd800a52b9c6b inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">Invoke handler explicitly (externally) with zero shift distance.  <a href="#ad1d4b904805578a7f4acd800a52b9c6b">More...</a><br /></td></tr>
+<tr class="separator:ad1d4b904805578a7f4acd800a52b9c6b inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa245e6bd153a154df15c6f9fb099cdbe inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classreflex_1_1_abstract_matcher.html#aa245e6bd153a154df15c6f9fb099cdbe">set_reserve</a> (size_t n)</td></tr>
 <tr class="memdesc:aa245e6bd153a154df15c6f9fb099cdbe inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set reserved bytes for buffer shifting.  <a href="#aa245e6bd153a154df15c6f9fb099cdbe">More...</a><br /></td></tr>
 <tr class="separator:aa245e6bd153a154df15c6f9fb099cdbe inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -172,7 +175,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:acb1d22133cb4cf88f208c45ee8cdc0e0 inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set interactive input with buffer size of 1 to read data bytewise which is very slow.  <a href="#acb1d22133cb4cf88f208c45ee8cdc0e0">More...</a><br /></td></tr>
 <tr class="separator:acb1d22133cb4cf88f208c45ee8cdc0e0 inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acafc5782952bb1e80c7e5bf367ffc6af inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classreflex_1_1_abstract_matcher.html#acafc5782952bb1e80c7e5bf367ffc6af">flush</a> ()</td></tr>
-<tr class="memdesc:acafc5782952bb1e80c7e5bf367ffc6af inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">Flush the buffer's remaining content.  <a href="#acafc5782952bb1e80c7e5bf367ffc6af">More...</a><br /></td></tr>
+<tr class="memdesc:acafc5782952bb1e80c7e5bf367ffc6af inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">Flush and delete the buffer's remaining content.  <a href="#acafc5782952bb1e80c7e5bf367ffc6af">More...</a><br /></td></tr>
 <tr class="separator:acafc5782952bb1e80c7e5bf367ffc6af inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a92391ce2c5eab5a6dbce067a8326702e inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="memItemLeft" align="right" valign="top">virtual size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classreflex_1_1_abstract_matcher.html#a92391ce2c5eab5a6dbce067a8326702e">get</a> (char *s, size_t n)</td></tr>
 <tr class="memdesc:a92391ce2c5eab5a6dbce067a8326702e inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns more input data directly from the source (method can be overriden, as by reflex::FlexLexer::get(s, n) for example that invokes reflex::FlexLexer::LexerInput(s, n)).  <a href="#a92391ce2c5eab5a6dbce067a8326702e">More...</a><br /></td></tr>
@@ -220,7 +223,7 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:aa1b7e09cf2e74ffbf09fb65ebac337f5 inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the first wide character of the text matched.  <a href="#aa1b7e09cf2e74ffbf09fb65ebac337f5">More...</a><br /></td></tr>
 <tr class="separator:aa1b7e09cf2e74ffbf09fb65ebac337f5 inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3a69f32040ea02b605f6fa0f31af0be7 inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classreflex_1_1_abstract_matcher.html#a3a69f32040ea02b605f6fa0f31af0be7">lineno_skip</a> (bool f=false)</td></tr>
-<tr class="memdesc:a3a69f32040ea02b605f6fa0f31af0be7 inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set or reset mode to count matching lines only and skip other (e.g. for speed).  <a href="#a3a69f32040ea02b605f6fa0f31af0be7">More...</a><br /></td></tr>
+<tr class="memdesc:a3a69f32040ea02b605f6fa0f31af0be7 inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set or reset mode to count matching lines only and skip all other (e.g. for speed).  <a href="#a3a69f32040ea02b605f6fa0f31af0be7">More...</a><br /></td></tr>
 <tr class="separator:a3a69f32040ea02b605f6fa0f31af0be7 inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3812c606737fdf861eb64023e9e9cec6 inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classreflex_1_1_abstract_matcher.html#a3812c606737fdf861eb64023e9e9cec6">lineno</a> (size_t n)</td></tr>
 <tr class="memdesc:a3812c606737fdf861eb64023e9e9cec6 inherit pub_methods_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set or change the starting line number of the last match.  <a href="#a3812c606737fdf861eb64023e9e9cec6">More...</a><br /></td></tr>
@@ -440,10 +443,10 @@ Protected Member Functions</h2></td></tr>
 <tr class="memdesc:a25f1ab76f52e6a0c4c05168b29932647 inherit pro_methods_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the current match position in the buffer and peek for more text, allows large buffer shifts that aren't pinned to txt_.  <a href="#a25f1ab76f52e6a0c4c05168b29932647">More...</a><br /></td></tr>
 <tr class="separator:a25f1ab76f52e6a0c4c05168b29932647 inherit pro_methods_classreflex_1_1_abstract_matcher"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad6889e7a74017302ef588e7371d06e6a inherit pro_methods_classreflex_1_1_abstract_matcher"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classreflex_1_1_abstract_matcher.html#ad6889e7a74017302ef588e7371d06e6a">get_more</a> ()</td></tr>
-<tr class="memdesc:ad6889e7a74017302ef588e7371d06e6a inherit pro_methods_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the next character and grow the buffer to make more room if necessary.  <a href="#ad6889e7a74017302ef588e7371d06e6a">More...</a><br /></td></tr>
+<tr class="memdesc:ad6889e7a74017302ef588e7371d06e6a inherit pro_methods_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the next character and grow the buffer to make more room if necessary, unless EOF.  <a href="#ad6889e7a74017302ef588e7371d06e6a">More...</a><br /></td></tr>
 <tr class="separator:ad6889e7a74017302ef588e7371d06e6a inherit pro_methods_classreflex_1_1_abstract_matcher"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7a57145ce5ead569c3758be586d28f41 inherit pro_methods_classreflex_1_1_abstract_matcher"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classreflex_1_1_abstract_matcher.html#a7a57145ce5ead569c3758be586d28f41">peek_more</a> ()</td></tr>
-<tr class="memdesc:a7a57145ce5ead569c3758be586d28f41 inherit pro_methods_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">Peek at the next character and grow the buffer to make more room if necessary.  <a href="#a7a57145ce5ead569c3758be586d28f41">More...</a><br /></td></tr>
+<tr class="memdesc:a7a57145ce5ead569c3758be586d28f41 inherit pro_methods_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">Peek at the next character and grow the buffer to make more room if necessary, unless EOF.  <a href="#a7a57145ce5ead569c3758be586d28f41">More...</a><br /></td></tr>
 <tr class="separator:a7a57145ce5ead569c3758be586d28f41 inherit pro_methods_classreflex_1_1_abstract_matcher"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-attribs"></a>
@@ -516,7 +519,7 @@ Protected Attributes</h2></td></tr>
 <tr class="memdesc:acf059b818f76cda98cfd8ef059d8586e inherit pro_attribs_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">character count of the input till bol_  <a href="#acf059b818f76cda98cfd8ef059d8586e">More...</a><br /></td></tr>
 <tr class="separator:acf059b818f76cda98cfd8ef059d8586e inherit pro_attribs_classreflex_1_1_abstract_matcher"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abd02b16f2713de6acc4aa19b459848e5 inherit pro_attribs_classreflex_1_1_abstract_matcher"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classreflex_1_1_abstract_matcher.html#abd02b16f2713de6acc4aa19b459848e5">res_</a></td></tr>
-<tr class="memdesc:abd02b16f2713de6acc4aa19b459848e5 inherit pro_attribs_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">reserve bytes to keep in the buffer before bol_ when shifting, use only w/o <a class="el" href="classreflex_1_1_abstract_matcher.html#a8d4857240b9fc10fae94e23401c345e1" title="event handler functor to invoke when buffer contents are shifted out ">evh_()</a> set  <a href="#abd02b16f2713de6acc4aa19b459848e5">More...</a><br /></td></tr>
+<tr class="memdesc:abd02b16f2713de6acc4aa19b459848e5 inherit pro_attribs_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">reserve bytes to keep in the buffer before bol_ when shifting  <a href="#abd02b16f2713de6acc4aa19b459848e5">More...</a><br /></td></tr>
 <tr class="separator:abd02b16f2713de6acc4aa19b459848e5 inherit pro_attribs_classreflex_1_1_abstract_matcher"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a62b02b00048ab1b2bbb2b548f8b7aa02 inherit pro_attribs_classreflex_1_1_abstract_matcher"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classreflex_1_1_abstract_matcher.html#a62b02b00048ab1b2bbb2b548f8b7aa02">own_</a></td></tr>
 <tr class="memdesc:a62b02b00048ab1b2bbb2b548f8b7aa02 inherit pro_attribs_classreflex_1_1_abstract_matcher"><td class="mdescLeft">&#160;</td><td class="mdescRight">true if <a class="el" href="classreflex_1_1_abstract_matcher.html#a522144cc1e11d86a7a44f3f41acc4ba9" title="input character sequence buffer ">AbstractMatcher::buf_</a> was allocated and should be deleted  <a href="#a62b02b00048ab1b2bbb2b548f8b7aa02">More...</a><br /></td></tr>
@@ -1007,7 +1010,7 @@ template&lt;typename P&gt; </div>
   </dd>
 </dl>
 
-<p>Reimplemented in <a class="el" href="classreflex_1_1_std_posix_matcher.html#abd244345629fa0ed623c64181616dade">reflex::StdPosixMatcher</a>, <a class="el" href="classreflex_1_1_std_ecma_matcher.html#a08cac8946486ec6ee39b149ea7f3ddb7">reflex::StdEcmaMatcher</a>, and <a class="el" href="classreflex_1_1_matcher.html#ab9cfed4ef718bd82770995a428097853">reflex::Matcher</a>.</p>
+<p>Reimplemented in <a class="el" href="classreflex_1_1_std_posix_matcher.html#a13692ad9af4fb5c64942de4b47be636b">reflex::StdPosixMatcher</a>, <a class="el" href="classreflex_1_1_std_ecma_matcher.html#a077ff7822531f9aa948fea73a3fcfc7f">reflex::StdEcmaMatcher</a>, and <a class="el" href="classreflex_1_1_matcher.html#aa697a0c652914ad016244762ce9c8529">reflex::Matcher</a>.</p>
 
 </div>
 </div>
@@ -1044,7 +1047,7 @@ template&lt;typename P&gt; </div>
   </dd>
 </dl>
 
-<p>Reimplemented in <a class="el" href="classreflex_1_1_std_posix_matcher.html#aa56f958fe9d54af49e7b0007e4d7c72e">reflex::StdPosixMatcher</a>, <a class="el" href="classreflex_1_1_std_ecma_matcher.html#a0a41e508700f5b05256516a1b6e0ea16">reflex::StdEcmaMatcher</a>, and <a class="el" href="classreflex_1_1_matcher.html#a6978aad0e7d03b2f1a5f88540f66112e">reflex::Matcher</a>.</p>
+<p>Reimplemented in <a class="el" href="classreflex_1_1_std_posix_matcher.html#a994a20f2137530de0a979c13f258d73a">reflex::StdPosixMatcher</a>, <a class="el" href="classreflex_1_1_std_ecma_matcher.html#a79605fee4ee0864a427098d2f0712c66">reflex::StdEcmaMatcher</a>, and <a class="el" href="classreflex_1_1_matcher.html#a8bb490829f2cd3d0fed87accc3ec3e6b">reflex::Matcher</a>.</p>
 
 </div>
 </div>
@@ -1081,7 +1084,7 @@ template&lt;typename P&gt; </div>
   </dd>
 </dl>
 
-<p>Reimplemented in <a class="el" href="classreflex_1_1_std_posix_matcher.html#aa81abb6405f6bd0e2fb615b98bab08ee">reflex::StdPosixMatcher</a>, <a class="el" href="classreflex_1_1_std_ecma_matcher.html#a2bbedba8d707b1ea55373896f5cf1d89">reflex::StdEcmaMatcher</a>, <a class="el" href="classreflex_1_1_matcher.html#a727e78766bd2f4dcd4e63b971391298d">reflex::Matcher</a>, <a class="el" href="classreflex_1_1_boost_matcher.html#a5cf10bcfa61168bb04d001d50cc9092e">reflex::BoostMatcher</a>, and <a class="el" href="classreflex_1_1_std_matcher.html#ac9779e6440bdce9778324c4e29fce4f0">reflex::StdMatcher</a>.</p>
+<p>Reimplemented in <a class="el" href="classreflex_1_1_std_posix_matcher.html#a677f79d84fb8cda9628bdcef14735f6b">reflex::StdPosixMatcher</a>, <a class="el" href="classreflex_1_1_std_ecma_matcher.html#a971f4c6239d0a1363a52f2f63d25d2ed">reflex::StdEcmaMatcher</a>, <a class="el" href="classreflex_1_1_matcher.html#aaf3c5f0771d40fab649b3bc0d7b380dc">reflex::Matcher</a>, <a class="el" href="classreflex_1_1_boost_matcher.html#ae57526a0fba0c86cbec3f59a61612c73">reflex::BoostMatcher</a>, and <a class="el" href="classreflex_1_1_std_matcher.html#ab3016daba099bd55da1eac027ad099e8">reflex::StdMatcher</a>.</p>
 
 </div>
 </div>
@@ -1118,7 +1121,7 @@ template&lt;typename P&gt; </div>
   </dd>
 </dl>
 
-<p>Reimplemented in <a class="el" href="classreflex_1_1_std_posix_matcher.html#a6d14551683ef6089b222c9c3a2198011">reflex::StdPosixMatcher</a>, <a class="el" href="classreflex_1_1_std_ecma_matcher.html#a6db306483babf4e560e2f5736f3d63a3">reflex::StdEcmaMatcher</a>, <a class="el" href="classreflex_1_1_matcher.html#a2eaff39eb46fea5b086a419d0702463a">reflex::Matcher</a>, <a class="el" href="classreflex_1_1_boost_matcher.html#aa4745ef2579a9bfe8c5d2b5d96514e37">reflex::BoostMatcher</a>, and <a class="el" href="classreflex_1_1_std_matcher.html#a6e03d0d2575c8371195caef09eec471e">reflex::StdMatcher</a>.</p>
+<p>Reimplemented in <a class="el" href="classreflex_1_1_std_posix_matcher.html#a81b4be334169b8742c6d940ed38262ac">reflex::StdPosixMatcher</a>, <a class="el" href="classreflex_1_1_std_ecma_matcher.html#a066f67f46b25b5e2c9ea75803add8407">reflex::StdEcmaMatcher</a>, <a class="el" href="classreflex_1_1_matcher.html#a33f43c18eb25a5e671412b0a35e56ef8">reflex::Matcher</a>, <a class="el" href="classreflex_1_1_boost_matcher.html#ae410508b5b3d74bdc86590332347d4cb">reflex::BoostMatcher</a>, and <a class="el" href="classreflex_1_1_std_matcher.html#acd6a867dd52fdc3ea1e1f175ba4392a1">reflex::StdMatcher</a>.</p>
 
 </div>
 </div>
@@ -1148,7 +1151,7 @@ template&lt;typename P&gt; </div>
 <p>Returns a reference to the pattern object associated with this matcher. </p>
 <dl class="section return"><dt>Returns</dt><dd>reference to pattern object </dd></dl>
 
-<p>Reimplemented in <a class="el" href="classreflex_1_1_matcher.html#a3f9cdd4e8d3ee5b66007be45850ea122">reflex::Matcher</a>.</p>
+<p>Reimplemented in <a class="el" href="classreflex_1_1_matcher.html#a7a25c00882afe4f0f8a48876ab206e8c">reflex::Matcher</a>.</p>
 
 </div>
 </div>
@@ -1207,7 +1210,7 @@ template&lt;typename P&gt; </div>
 </div><!-- contents -->
 <hr class="footer">
 <address class="footer"><small>
-Converted on Mon Jan 27 2025 10:58:22 by <a target="_blank" href="http://www.doxygen.org/index.html">Doxygen</a> 1.8.11</small></address>
+Converted on Fri May 16 2025 15:23:49 by <a target="_blank" href="http://www.doxygen.org/index.html">Doxygen</a> 1.8.11</small></address>
 <br>
 <div style="height: 246px; background: #DBDBDB;">
 </body>
