@@ -46,6 +46,15 @@ module;
 
 #ifdef SOUP_BUILD
 module reflex;
+
+#if defined(__GNUC__) || defined(__clang__)
+#define REFLEX_LIKELY(x)   __builtin_expect(!!(x), 1)
+#define REFLEX_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#else
+#define REFLEX_LIKELY(x)   (x)
+#define REFLEX_UNLIKELY(x) (x)
+#endif
+
 #else
 #include <reflex/matcher.h>
 #endif

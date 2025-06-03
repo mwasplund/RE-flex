@@ -1,12 +1,12 @@
 Name: 'reflex'
 Language: 'C++|0'
-Version: 5.2.1
+Version: 5.5.0
 EnableWarningsAsErrors: false
 IncludePaths: [
 	'include/'
 ]
-Interface: 'Module.cpp'
 Source: [
+	'Module.cpp'
 	'lib/convert.cpp'
 	'lib/error.cpp'
 	'lib/input.cpp'
