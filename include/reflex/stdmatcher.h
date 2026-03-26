@@ -38,9 +38,7 @@
 #define REFLEX_STDMATCHER_H
 
 #include <reflex/absmatcher.h>
-#ifndef SOUP_BUILD
 #include <regex>
-#endif
 
 namespace reflex {
 

@@ -1,8 +1,6 @@
 // Converted from http://www.unicode.org/Public/UCD/latest/ucd/UnicodeData.txt by letter_scripts.l
 
-module;
-#include <iostream>
-module reflex;
+#include <reflex/unicode.h>
 
 void reflex::Unicode::Tables::letter_scripts(void)
 {

@@ -37,10 +37,8 @@
 #ifndef REFLEX_POSIX_H
 #define REFLEX_POSIX_H
 
-#ifndef SOUP_BUILD
 #include <cstring>
 #include <map>
-#endif
 
 namespace reflex {
 

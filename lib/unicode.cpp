@@ -34,9 +34,8 @@
 @copyright (c) BSD-3 License - see LICENSE.txt
 */
 
-module;
-#include <iostream>
-module reflex;
+#include <reflex/unicode.h>
+#include <reflex/utf8.h>
 
 namespace reflex {
 

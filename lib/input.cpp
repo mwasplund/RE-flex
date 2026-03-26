@@ -34,18 +34,10 @@
 @copyright (c) BSD-3 License - see LICENSE.txt
 */
 
-
-module;
-#include <cstring>
-#include <iostream>
-
-#define MACRO_ONLY
-#include <reflex/utf8.h>
-
+#include <reflex/input.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-
 #if (defined(__WIN32__) || defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(__BORLANDC__)) && !defined(__CYGWIN__) && !defined(__MINGW32__) && !defined(__MINGW64__)
 # include <io.h>
 # include <fcntl.h>
@@ -56,8 +48,6 @@ module;
 # include <unistd.h> // off_t, fstat()
 # include <sys/select.h>
 #endif
-
-module reflex;
 
 namespace reflex {
 

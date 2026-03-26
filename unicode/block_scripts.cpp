@@ -1,8 +1,6 @@
 // Converted from http://www.unicode.org/Public/UCD/latest/ucd/Blocks.txt by block_scripts.l
 
-module;
-#include <iostream>
-module reflex;
+#include <reflex/unicode.h>
 
 void reflex::Unicode::Tables::block_scripts(void)
 {

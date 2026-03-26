@@ -34,11 +34,10 @@
 @copyright (c) BSD-3 License - see LICENSE.txt
 */
 
-module;
+#include <reflex/error.h>
 #include <cstdio>
 #include <cstring>
 #include <iostream>
-module reflex;
 
 namespace reflex {
 

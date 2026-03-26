@@ -34,23 +34,13 @@
 @copyright (c) BSD-3 License - see LICENSE.txt
 */
 
-module;
-#include <cstdint>
-#include <cstring>
-#include <iostream>
-#include <map>
-#include <set>
-#include <vector>
-#define WITH_VECTOR
-#define WITH_TREE_DFA
-#include <reflex/debug.h>
-
+#include <reflex/pattern.h>
+#include <reflex/simd.h>
+#include <reflex/timer.h>
 #include <algorithm>
 #include <cstdlib>
 #include <cerrno>
 #include <cmath>
-
-module reflex;
 
 /// DFA compaction: -1 == reverse order edge compression (best); 1 == edge compression; 0 == no edge compression.
 /** Edge compression reorders edges to produce fewer tests when executed in the compacted order.

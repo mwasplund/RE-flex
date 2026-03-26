@@ -39,12 +39,10 @@
 
 #if defined(__WIN32__) || defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(__CYGWIN__) || defined(__MINGW32__) || defined(__MINGW64__) || defined(__BORLANDC__)
 
-#ifndef SOUP_BUILD
 // disable min/max macros to use std::min and std::max
 #define NOMINMAX
 
 #include <windows.h>
-#endif
 
 namespace reflex {
 
@@ -75,10 +73,8 @@ inline float timer_elapsed(timer_type& t) ///< timer to be updated
 
 #else
 
-#ifndef SOUP_BUILD
 #include <cstddef>
 #include <sys/time.h>
-#endif
 
 namespace reflex {
 

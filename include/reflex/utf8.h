@@ -37,11 +37,9 @@
 #ifndef REFLEX_UTF8_H
 #define REFLEX_UTF8_H
 
-#ifndef SOUP_BUILD
 #include <cstddef>
 #include <cstring>
 #include <string>
-#endif
 
 #if defined(WITH_STANDARD_REPLACEMENT_CHARACTER)
 /// Replace invalid UTF-8 with the standard replacement character U+FFFD.  This is not the default in RE/flex.

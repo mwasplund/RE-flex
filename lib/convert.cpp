@@ -34,13 +34,14 @@
 @copyright (c) BSD-3 License - see LICENSE.txt
 */
 
-module;
+#include <reflex/convert.h>
+#include <reflex/posix.h>
+#include <reflex/ranges.h>
+#include <reflex/unicode.h>
+#include <reflex/utf8.h>
 #include <cctype>
-#include <cstdio>
+#include <cstdlib>
 #include <cstring>
-#include <iostream>
-#include <map>
-module reflex;
 
 namespace reflex {
 

@@ -43,7 +43,6 @@
 #include <reflex/pattern.h>
 #include <reflex/matcher.h>
 #include <reflex/utf8.h>
-#ifndef SOUP_BUILD
 #include <cctype>
 #include <cstdlib>
 #include <cerrno>
@@ -54,7 +53,6 @@
 #include <set>
 #include <stack>
 #include <vector>
-#endif
 
 #if defined(__WIN32__) || defined(_WIN32) || defined(WIN32) || defined(__CYGWIN__) || defined(__MINGW32__) || defined(__MINGW64__) || defined(__BORLANDC__)
 # define OS_WIN

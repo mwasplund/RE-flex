@@ -34,10 +34,7 @@
 @copyright (c) BSD-3 License - see LICENSE.txt
 */
 
-module;
-#include <cstdint>
-#include <cstring>
-module reflex;
+#include <reflex/simd.h>
 
 namespace reflex {
 

@@ -37,9 +37,7 @@
 #ifndef REFLEX_BITS_H
 #define REFLEX_BITS_H
 
-#ifndef SOUP_BUILD
 #include <cstring>
-#endif
 
 #if defined(__WIN32__) || defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(__BORLANDC__)
 namespace reflex {
@@ -49,9 +47,7 @@ typedef unsigned __int32 uint32_t;
 typedef unsigned __int64 uint64_t;
 }
 #elif !defined(CONFIG_H)
-#ifndef SOUP_BUILD
 # include <stdint.h>
-#endif
 #endif
 
 namespace reflex {

@@ -34,23 +34,7 @@
 @copyright (c) BSD-3 License - see LICENSE.txt
 */
 
-module;
-#include <cassert>
-#include <cstdio>
-#include <cstdint>
-#include <cstring>
-#include <iostream>
-#include <reflex/debug.h>
-
-module reflex;
-
-#if defined(__GNUC__) || defined(__clang__)
-#define REFLEX_LIKELY(x)   __builtin_expect(!!(x), 1)
-#define REFLEX_UNLIKELY(x) __builtin_expect(!!(x), 0)
-#else
-#define REFLEX_LIKELY(x)   (x)
-#define REFLEX_UNLIKELY(x) (x)
-#endif
+#include <reflex/matcher.h>
 
 namespace reflex {
 

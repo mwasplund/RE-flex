@@ -37,7 +37,6 @@
 #ifndef SIMD_H
 #define SIMD_H
 
-#ifndef SOUP_BUILD
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -54,22 +53,17 @@
 #  include <arm_acle.h>
 # endif
 #endif
-#endif
 
 #if defined(HAVE_AVX512BW) || defined(HAVE_AVX2) || defined(HAVE_SSE2)
 
 #ifdef _MSC_VER
-#ifndef SOUP_BUILD
 # include <intrin.h>
-#endif
 #endif
 
 #ifdef _MSC_VER
 # define cpuidex __cpuidex
 #else
-#ifndef SOUP_BUILD
 # include <cpuid.h>
-#endif
 # ifndef __cpuid_count
 #  include <cpuid.h>
 # endif

@@ -43,7 +43,6 @@
 #include <reflex/input.h>
 #include <reflex/ranges.h>
 #include <reflex/setop.h>
-#ifndef SOUP_BUILD
 #include <cstdint>
 #include <cctype>
 #include <cstring>
@@ -56,7 +55,6 @@
 #include <bitset>
 #include <vector>
 #include <stack>
-#endif
 
 // ugrep 7.0: use vectorized bitap (hashed) with AVX2, but it is not faster (in our extensive emperical testing)
 // #define WITH_BITAP_AVX2
@@ -73,9 +71,6 @@
 namespace reflex {
 
 /// Pattern class holds a regex pattern and its compiled FSM opcode table or code for the reflex::Matcher engine.
-#ifdef SOUP_BUILD
-export
-#endif
 class Pattern {
   friend class Matcher;      ///< permit access by the reflex::Matcher engine
   friend class FuzzyMatcher; ///< permit access by the reflex::FuzzyMatcher engine
