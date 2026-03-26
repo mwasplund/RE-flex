@@ -35,16 +35,12 @@
 */
 
 
-#ifdef SOUP_BUILD
 module;
 #include <cstring>
 #include <iostream>
 
 #define MACRO_ONLY
 #include <reflex/utf8.h>
-#else
-#include <reflex/input.h>
-#endif
 
 #include <stdio.h>
 #include <sys/stat.h>
@@ -61,9 +57,7 @@ module;
 # include <sys/select.h>
 #endif
 
-#ifdef SOUP_BUILD
 module reflex;
-#endif
 
 namespace reflex {
 

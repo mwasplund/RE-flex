@@ -34,17 +34,9 @@
 @copyright (c) BSD-3 License - see LICENSE.txt
 */
 
-#ifdef SOUP_BUILD
 module;
 #include <iostream>
-#else
-#include <reflex/unicode.h>
-#include <reflex/utf8.h>
-#endif
-
-#ifdef SOUP_BUILD
 module reflex;
-#endif
 
 namespace reflex {
 

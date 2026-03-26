@@ -34,7 +34,6 @@
 @copyright (c) BSD-3 License - see LICENSE.txt
 */
 
-#ifdef SOUP_BUILD
 module;
 #include <cassert>
 #include <cstdio>
@@ -42,9 +41,7 @@ module;
 #include <cstring>
 #include <iostream>
 #include <reflex/debug.h>
-#endif
 
-#ifdef SOUP_BUILD
 module reflex;
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -53,10 +50,6 @@ module reflex;
 #else
 #define REFLEX_LIKELY(x)   (x)
 #define REFLEX_UNLIKELY(x) (x)
-#endif
-
-#else
-#include <reflex/matcher.h>
 #endif
 
 namespace reflex {
